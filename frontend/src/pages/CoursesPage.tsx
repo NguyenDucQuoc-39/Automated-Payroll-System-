@@ -59,6 +59,7 @@ interface Course {
   };
 }
 
+
 // Định nghĩa interface cho phản hồi API của departments nếu nó có cấu trúc phân trang
 interface DepartmentApiResponse {
   departments: Department[]; // Đây là mảng các khoa
@@ -118,10 +119,11 @@ const CoursesPage: React.FC = () => {
   const fetchDepartments = useCallback(async () => {
     try {
       // API của bạn trả về một đối tượng có thuộc tính 'departments' là một mảng
-      const response = await api.get<DepartmentApiResponse>('/departments');
+      const response = await api.get('/departments/all');
+      const departmentsData = Array.isArray(response.data) ? response.data : [];
       // Trích xuất mảng 'departments' từ dữ liệu phản hồi
-      if (Array.isArray(response.data.departments)) { // Đảm bảo rằng response.data.departments là một mảng
-        setDepartments(response.data.departments);
+      if (Array.isArray(departmentsData)) { // Đảm bảo rằng response.data.departments là một mảng
+        setDepartments(departmentsData);
       } else {
         console.error('API response for departments is not an array (nested property):', response.data.departments);
         setError('Dữ liệu khoa không đúng định dạng. Vui lòng kiểm tra lại cấu trúc API.');

@@ -139,4 +139,36 @@ enum Gender {
   MALE
   FEMALE
   OTHER
+}
+
+model LessonCoefficient {
+  id           String   @id @default(uuid())
+  academicYear String   // Năm học áp dụng (ví dụ: '2023-2024')
+  amount       Int      // Số tiền một tiết
+  status       String   // ACTIVE/INACTIVE
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model DegreeCoefficient {
+  id           String   @id @default(uuid())
+  academicYear String   // Năm học áp dụng
+  master       Float    // Hệ số Thạc Sĩ
+  doctor       Float    // Hệ số Tiến Sĩ
+  associateProfessor Float // Hệ số Phó Giáo Sư
+  professor    Float    // Hệ số Giáo Sư
+  status       String   // ACTIVE/INACTIVE
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ClassCoefficient {
+  id           String   @id @default(uuid())
+  academicYear String   // Năm học áp dụng
+  minStudents  Int      // Số lượng sinh viên nhỏ nhất
+  maxStudents  Int      // Số lượng sinh viên lớn nhất
+  coefficient  Float    // Hệ số lớp
+  status       String   // ACTIVE/INACTIVE
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 } 

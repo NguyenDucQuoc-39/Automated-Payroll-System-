@@ -14,6 +14,10 @@ import TeachersPage from './pages/TeachersPage';
 import Statistics from './pages/TeachersStatisticsPage';
 import ClassSectionPage from './pages/ClassSectionPage';
 import ClassSectionStatistics from './pages/ClassSectionStatisticsPage';
+import TietHeSoPage from './pages/TietHeSoPage';
+import BangCapHeSoPage from './pages/BangCapHeSoPage';
+import LopHeSoPage from './pages/LopHeSoPage';
+import TinhTienDayPage from './pages/TinhTienDayPage';
 
 
 const App: React.FC = () => {
@@ -44,6 +48,10 @@ const App: React.FC = () => {
         <Route path="courses" element={<CoursesPage />} />
         <Route path="class-sections" element={<ClassSectionPage />} />
         <Route path="class-section-statistics" element={<ClassSectionStatistics />} />
+        <Route path="tiet-he-so" element={<TietHeSoPage />} />
+        <Route path="bang-cap-he-so" element={<BangCapHeSoPage />} />
+        <Route path="lop-he-so" element={<LopHeSoPage />} />
+        <Route path="tinh-tien-day" element={<TinhTienDayPage />} />
       </Route>
     </Routes>
   );

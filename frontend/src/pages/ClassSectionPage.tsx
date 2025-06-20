@@ -34,6 +34,8 @@ import { RootState } from '../store';
 import { useSelector } from 'react-redux';
 import { message } from 'antd';
 import { ClassSection, Semester, Course, Department, Teacher } from '../types/typeFrontend'; // Đảm bảo đúng đường dẫn tới types của bạn
+import { getClassSections, updateClassSection } from '../services/classSection.service';
+import { getTeachersByDepartment } from '../services/teacher.service';
 
 // Định nghĩa interface cho phản hồi API của departments nếu nó có cấu trúc phân trang
 interface DepartmentApiResponse {
@@ -133,6 +135,16 @@ const ClassSectionsPage: React.FC = () => {
   const [filterDepartmentId, setFilterDepartmentId] = useState('');
   const [filterSemesterId, setFilterSemesterId] = useState('');
 
+  const [openBulkAssign, setOpenBulkAssign] = useState(false);
+  const [bulkSemesterId, setBulkSemesterId] = useState('');
+  const [bulkDepartmentId, setBulkDepartmentId] = useState('');
+  const [bulkClassSections, setBulkClassSections] = useState<FullClassSection[]>([]);
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<string[]>([]);
+  const [bulkTeachers, setBulkTeachers] = useState<Teacher[]>([]);
+  const [bulkTeacherId, setBulkTeacherId] = useState('');
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkSuccess, setBulkSuccess] = useState<string | null>(null);
 
   const fetchClassSections = useCallback(async () => {
     setLoading(true);
@@ -282,6 +294,26 @@ const ClassSectionsPage: React.FC = () => {
     }
   }, [batchFormData.departmentId, fetchCoursesByDepartment]);
 
+  // Fetch unassigned class sections and teachers when semester/department changes
+  useEffect(() => {
+    if (openBulkAssign && bulkSemesterId && bulkDepartmentId) {
+      setBulkLoading(true);
+      setBulkClassSections([]);
+      setBulkTeachers([]);
+      setBulkSelectedIds([]);
+      setBulkTeacherId('');
+      setBulkError(null);
+      setBulkSuccess(null);
+      // Fetch class sections
+      getClassSections({ semesterId: bulkSemesterId, departmentId: bulkDepartmentId }).then((res: any) => {
+        const unassigned = (res.data.classSections || []).filter((cs: any) => !cs.assignedTeacherId && !cs.assignedTeacher);
+        setBulkClassSections(unassigned);
+      });
+      // Fetch teachers
+      getTeachersByDepartment(bulkDepartmentId).then((res: any) => setBulkTeachers(res.data));
+      setBulkLoading(false);
+    }
+  }, [openBulkAssign, bulkSemesterId, bulkDepartmentId]);
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value);
@@ -357,6 +389,29 @@ const ClassSectionsPage: React.FC = () => {
     setBatchSuccessMessage(null);
   };
 
+  const handleOpenBulkAssign = () => {
+    setOpenBulkAssign(true);
+    setBulkSemesterId('');
+    setBulkDepartmentId('');
+    setBulkClassSections([]);
+    setBulkSelectedIds([]);
+    setBulkTeachers([]);
+    setBulkTeacherId('');
+    setBulkError(null);
+    setBulkSuccess(null);
+  };
+
+  const handleCloseBulkAssign = () => {
+    setOpenBulkAssign(false);
+    setBulkSemesterId('');
+    setBulkDepartmentId('');
+    setBulkClassSections([]);
+    setBulkSelectedIds([]);
+    setBulkTeachers([]);
+    setBulkTeacherId('');
+    setBulkError(null);
+    setBulkSuccess(null);
+  };
 
   const handleChange = (e: SelectChangeEvent<string> | React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -557,6 +612,49 @@ const ClassSectionsPage: React.FC = () => {
     return course.name;
   };
 
+  const handleBulkSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      setBulkSelectedIds(bulkClassSections.map(cs => cs.id));
+    } else {
+      setBulkSelectedIds([]);
+    }
+  };
+
+  const handleBulkSelectOne = (id: string) => {
+    setBulkSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const handleBulkAssign = async () => {
+    setBulkLoading(true);
+    setBulkError(null);
+    setBulkSuccess(null);
+    try {
+      await Promise.all(
+        bulkSelectedIds.map(id => {
+          const cs = bulkClassSections.find(cs => cs.id === id);
+          if(!cs) return Promise.resolve();
+          return updateClassSection(id, {
+            code: cs.code,
+            name: cs.name,
+            semesterId: cs.semesterId,
+            courseId: cs.courseId,
+            maxStudents: cs.maxStudents,
+            assignedTeacherId: bulkTeacherId,
+            status: cs.status,
+          });
+        })
+      );
+      setBulkSuccess('Phân công giảng viên thành công!');
+      setBulkSelectedIds([]);
+      setBulkTeacherId('');
+      fetchClassSections();
+    } catch (err: any) {
+      setBulkError('Có lỗi khi phân công giảng viên.');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -634,7 +732,7 @@ const ClassSectionsPage: React.FC = () => {
             sx={{ mr: 2 }}
             startIcon={<AddIcon />}
           >
-            Tạo Hàng Loạt
+            Tạo Hàng Loạt Lớp Học Phần
           </Button>
           <Button
             variant="contained"
@@ -642,6 +740,16 @@ const ClassSectionsPage: React.FC = () => {
             startIcon={<AddIcon />}
           >
             Thêm Lớp Học Phần
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            sx={{ mr: 3, ml: 2 }}
+            startIcon={<AddIcon />}
+            onClick={handleOpenBulkAssign}
+           
+          >
+            Phân Công Giảng Viên
           </Button>
         </Box>
       </Box>
@@ -977,6 +1085,103 @@ const ClassSectionsPage: React.FC = () => {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Bulk Assign Dialog */}
+      <Dialog open={openBulkAssign} onClose={handleCloseBulkAssign} maxWidth="md" fullWidth>
+        <DialogTitle>Phân Công Giảng Viên Hàng Loạt</DialogTitle>
+        <DialogContent>
+          {bulkError && <Alert severity="error">{bulkError}</Alert>}
+          {bulkSuccess && <Alert severity="success">{bulkSuccess}</Alert>}
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Chọn Năm Học (Kì Học)</InputLabel>
+            <Select
+              value={bulkSemesterId}
+              label="Chọn Năm Học (Kì Học)"
+              onChange={e => setBulkSemesterId(e.target.value)}
+            >
+              {semesters.map(s => (
+                <MenuItem key={s.id} value={s.id}>{s.academicYear} - {s.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Chọn Khoa</InputLabel>
+            <Select
+              value={bulkDepartmentId}
+              label="Chọn Khoa"
+              onChange={e => setBulkDepartmentId(e.target.value)}
+            >
+              {departments.map(d => (
+                <MenuItem key={d.id} value={d.id}>{d.fullName}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          {bulkSemesterId && bulkDepartmentId && (
+            <>
+              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Chọn Lớp Học Phần Chưa Phân Công</Typography>
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell padding="checkbox">
+                        <input
+                          type="checkbox"
+                          checked={bulkSelectedIds.length === bulkClassSections.length && bulkClassSections.length > 0}
+                          onChange={handleBulkSelectAll}
+                        />
+                      </TableCell>
+                      <TableCell>Mã Lớp Học Phần</TableCell>
+                      <TableCell>Tên Lớp Học Phần</TableCell>
+                      <TableCell>Học Phần</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {bulkClassSections.map(cs => (
+                      <TableRow key={cs.id} selected={bulkSelectedIds.includes(cs.id)}>
+                        <TableCell padding="checkbox">
+                          <input
+                            type="checkbox"
+                            checked={bulkSelectedIds.includes(cs.id)}
+                            onChange={() => handleBulkSelectOne(cs.id)}
+                          />
+                        </TableCell>
+                        <TableCell>{cs.code}</TableCell>
+                        <TableCell>{cs.name}</TableCell>
+                        <TableCell>{cs.course.name}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <FormControl fullWidth margin="normal" sx={{ mt: 2 }}>
+                <InputLabel>Chọn Giảng Viên</InputLabel>
+                <Select
+                  value={bulkTeacherId}
+                  label="Chọn Giảng Viên"
+                  onChange={e => setBulkTeacherId(e.target.value)}
+                >
+                  {bulkTeachers.map(t => (
+                    <MenuItem key={t.id} value={t.id}>{t.lastName} {t.firstName}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Typography variant="body2" sx={{ mt: 2 }}>
+                Số lớp học phần được chọn: <b>{bulkSelectedIds.length}</b>
+              </Typography>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseBulkAssign}>Hủy</Button>
+          <Button
+            onClick={handleBulkAssign}
+            variant="contained"
+            disabled={!bulkTeacherId || bulkSelectedIds.length === 0 || bulkLoading}
+          >
+            {bulkLoading ? 'Đang phân công...' : 'Phân Công'}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

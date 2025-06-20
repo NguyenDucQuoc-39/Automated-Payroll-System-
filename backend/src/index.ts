@@ -9,6 +9,9 @@ import statisticsRoutes from './routes/statistics';
 import semesterRoutes from './routes/semester.routes';
 import courseRoutes from './routes/course.routes';
 import classSectionRoutes from './routes/classSection.routes';
+import lessonCoefficientRoutes from './routes/lessonCoefficient.routes';
+import degreeCoefficientRoutes from './routes/degreeCoefficient.routes';
+import classCoefficientRoutes from './routes/classCoefficient.routes';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -37,6 +40,9 @@ app.use('/api/statistics', statisticsRoutes);
 app.use('/api/semesters', semesterRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/class-sections', classSectionRoutes);
+app.use('/api/lesson-coefficients', lessonCoefficientRoutes);
+app.use('/api/degree-coefficients', degreeCoefficientRoutes);
+app.use('/api/class-coefficients', classCoefficientRoutes);
 // Health check endpoint
 app.get('/health', async (_, res) => {
   try {

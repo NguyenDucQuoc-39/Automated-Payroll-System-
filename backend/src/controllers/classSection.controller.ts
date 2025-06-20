@@ -605,6 +605,7 @@ export const getAllClassSections = async (req: Request, res: Response) => {
             code: true,
             name: true,
             departmentId: true,
+            totalHours: true,
             department: {
               select: { id: true, fullName: true },
             },

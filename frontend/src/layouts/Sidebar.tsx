@@ -22,7 +22,7 @@ import {
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
-  School as SchoolIcon,
+  School as SchoolIcon, // Có thể loại bỏ nếu không dùng
   BarChart as BarChartIcon,
   AccountCircle as AccountCircleIcon,
   ExpandLess,
@@ -30,10 +30,24 @@ import {
   Info as InfoIcon,
   Business as BusinessIcon,
   Person as PersonIcon,
-  MenuBook as MenuBookIcon,
+  MenuBook as MenuBookIcon, // Giữ hoặc thay bằng BookIcon
   CalendarToday as CalendarTodayIcon,
-  Book as BookIcon,
+  Book as BookIcon, // Giữ hoặc thay bằng MenuBookIcon
   Assessment as AssessmentIcon,
+  Settings as SettingsIcon,
+  MonetizationOn as MoneyIcon, // Giữ nguyên MonetizationOnIcon
+ 
+  Class as ClassIcon, // Giữ nguyên ClassIcon
+
+  // CÁC ICON MỚI ĐƯỢC THÊM VÀO HOẶC THAY THẾ
+  CardMembership as CardMembershipIcon, // Cho Bằng Cấp
+  AttachMoney as AttachMoneyIcon, // Cho Hệ Số Tiết Học
+  LocalAtm as LocalAtmIcon, // Cho Hệ Số Bằng Cấp
+  PriceChange as PriceChangeIcon, // Cho Hệ Số Lớp
+  Groups as GroupsIcon, // Thay thế PersonIcon cho Giảng Viên (nếu muốn)
+  HourglassEmpty as HourglassEmptyIcon, // Một lựa chọn khác cho hệ số tiết học
+  Stars as StarsIcon, // Một lựa chọn khác cho hệ số bằng cấp
+  EmojiEvents as EmojiEventsIcon, // Một lựa chọn khác cho Bằng Cấp
 } from '@mui/icons-material';
 import { logout } from '../store/slices/authSlice';
 import { AppDispatch } from '../store';
@@ -48,6 +62,7 @@ const MainLayout: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [infoMenuOpen, setInfoMenuOpen] = useState(false);
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
+  const [salaryMenuOpen, setSalaryMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
@@ -77,21 +92,25 @@ const MainLayout: React.FC = () => {
     setCourseMenuOpen(!courseMenuOpen);
   };
 
+  const handleSalaryMenuClick = () => {
+    setSalaryMenuOpen(!salaryMenuOpen);
+  };
+
   const menuItems = [
     { text: 'Trang chủ', icon: <DashboardIcon />, path: '/dashboard' },
   ];
 
   const infoMenuItems = [
-    { text: 'Bằng Cấp', icon: <SchoolIcon />, path: '/degrees' },
+    { text: 'Bằng Cấp', icon: <CardMembershipIcon />, path: '/degrees',  }, // Đã thay đổi
     { text: 'Khoa', icon: <BusinessIcon />, path: '/departments' },
-    { text: 'Giảng Viên', icon: <PersonIcon />, path: '/teachers' },
+    { text: 'Giảng Viên', icon: <GroupsIcon />, path: '/teachers' },
     { text: 'Thống Kê Giảng Viên', icon: <BarChartIcon />, path: '/statistics' },
   ];
-
+  
   const courseMenuItems = [
     { text: 'Học Kỳ', icon: <CalendarTodayIcon />, path: '/semesters' },
-    { text: 'Học Phần', icon: <BookIcon />, path: '/courses' },
-    { text: 'Lớp Học Phần', icon: <SchoolIcon />, path: '/class-sections' },
+    { text: 'Học Phần', icon: <MenuBookIcon />, path: '/courses' },
+    { text: 'Lớp Học Phần & Phân Công Giảng Viên', icon: <ClassIcon />, path: '/class-sections' },
     { text: 'Thống Kê Số Lớp', icon: <AssessmentIcon />, path: '/class-section-statistics' },
   ];
 
@@ -281,6 +300,68 @@ const MainLayout: React.FC = () => {
                 </ListItemButton>
               </ListItem>
             ))}
+          </Collapse>
+
+          <ListItem disablePadding>
+            <ListItemButton onClick={handleSalaryMenuClick} sx={{ color: 'white' }}>
+              <ListItemIcon sx={{ color: 'white' }}>
+                <SettingsIcon />
+              </ListItemIcon>
+              <ListItemText primary="Thiết Lập Hệ Số Và Tính Tiền" />
+              {salaryMenuOpen ? <ExpandLess /> : <ExpandMore />}
+            </ListItemButton>
+          </ListItem>
+          <Collapse in={salaryMenuOpen} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              <ListItem disablePadding>
+                <ListItemButton
+                  sx={{ pl: 4, color: 'white', '&.Mui-selected': { backgroundColor: selectedItemBg, color: 'white', '&:hover': { backgroundColor: selectedItemBg } }, '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' } }}
+                  selected={location.pathname === '/tiet-he-so'}
+                  onClick={() => navigate('/tiet-he-so')}
+                >
+                  <ListItemIcon sx={{ color: 'white' }}>
+                    <HourglassEmptyIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Thiết Lập Hệ Số Tiết Học" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  sx={{ pl: 4, color: 'white', '&.Mui-selected': { backgroundColor: selectedItemBg, color: 'white', '&:hover': { backgroundColor: selectedItemBg } }, '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' } }}
+                  selected={location.pathname === '/bang-cap-he-so'}
+                  onClick={() => navigate('/bang-cap-he-so')}
+                >
+                  <ListItemIcon sx={{ color: 'white' }}>
+                    <StarsIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Thiết Lập Hệ Số Bằng Cấp" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  sx={{ pl: 4, color: 'white', '&.Mui-selected': { backgroundColor: selectedItemBg, color: 'white', '&:hover': { backgroundColor: selectedItemBg } }, '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' } }}
+                  selected={location.pathname === '/lop-he-so'}
+                  onClick={() => navigate('/lop-he-so')}
+                >
+                  <ListItemIcon sx={{ color: 'white' }}>
+                    <SchoolIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Thiết Lập Hệ Số Lớp" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  sx={{ pl: 4, color: 'white', '&.Mui-selected': { backgroundColor: selectedItemBg, color: 'white', '&:hover': { backgroundColor: selectedItemBg } }, '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.08)' } }}
+                  selected={location.pathname === '/tinh-tien-day'}
+                  onClick={() => navigate('/tinh-tien-day')}
+                >
+                  <ListItemIcon sx={{ color: 'white' }}>
+                    <MoneyIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Tính Tiền Dạy" />
+                </ListItemButton>
+              </ListItem>
+            </List>
           </Collapse>
         </List>
       </Drawer>
