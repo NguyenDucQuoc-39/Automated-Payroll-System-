@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      Role     @default(TEACHER)
+  teacher   Teacher?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Teacher {
+  id           String   @id @default(cuid())
+  orderNumber Int       @default(autoincrement()) // Số thứ tự
+  firstName    String
+  lastName     String
+  gender       Gender
+  office       String
+  email        String   @unique
+  isHead       Boolean  @default(false)
+  degreeId     String
+  departmentId String
+  userId       String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  degree       Degree   @relation(fields: [degreeId], references: [id])
+  department   Department @relation(fields: [departmentId], references: [id])
+  user         User     @relation(fields: [userId], references: [id])
+  departmentHead Department[] @relation("DepartmentHead") // Mối quan hệ ngược lại với DepartmentHead
+   assignedClassSections ClassSection[] @relation("AssignedClassSections") //
+}
+
+// Department model
+model Department {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  shortName   String    @unique
+  fullName    String    @unique
+  office      String
+  orderNumber Int       @default(autoincrement()) // Số thứ tự
+  head        Teacher?  @relation("DepartmentHead", fields: [headId], references: [id])
+  headId      String?   @unique
+  teachers    Teacher[]
+  courses     Course[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+enum DegreeTypeEnum {
+  MASTER              // Thạc Sĩ
+  DOCTOR              // Tiến Sĩ
+  ASSOCIATE_PROFESSOR // Phó giáo sư
+  PROFESSOR          // Giáo Sư
+}
+
+// Degree model
+model Degree {
+  id          String    @id @default(uuid())
+  orderNumber Int       @default(autoincrement())
+  type        DegreeTypeEnum    
+  fullName    String    // Full name like "Tiến sĩ Toán học"
+  shortName   String    // Tên viết tắt
+  teachers    Teacher[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+
+// Semester model
+model Semester {
+  id           String         @id @default(cuid())
+  orderNumber  Int            @unique @default(autoincrement()) // Số thứ tự (VD: 1, 2, 3, Hè)
+  name         String         // Tên Học Kì (VD: 'Học kì 1', 'Học kì 2', 'Học kì 3', 'Kì hè')
+  academicYear String         // Năm Học (VD: '2020-2021', '2021-2022')
+  startDate    DateTime
+  endDate      DateTime
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  @@unique([orderNumber, academicYear])
+
+  classSections ClassSection[] //lấy ClassSection từ Semester
+}
+
+model Course {
+  id          String    @id @default(uuid())
+  code        String    @unique // Mã học phần
+  name        String    // Tên học phần
+  credit      Int       @default(1) // Số tín chỉ (mặc định 1)
+  totalHours  Int       // Tổng số tiết (tính tự động)
+  departmentId String
+  department  Department @relation(fields: [departmentId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  classSections ClassSection[] //lấy ClassSection từ Course
+  @@unique([code, departmentId]) // Mã học phần phải duy nhất trong một khoa
+}
+
+model ClassSection {
+  id                  String    @id @default(uuid())
+  code                String    // Mã lớp học phần (ví dụ: CTDL-01, THCSDL-K65-02)
+  name                String    // Tên lớp học phần (ví dụ: Cơ Sở Dữ Liệu-CTDL-010)
+  semesterId          String
+  semester            Semester  @relation(fields: [semesterId], references: [id])
+  courseId            String
+  course              Course    @relation(fields: [courseId], references: [id])
+  maxStudents         Int?      // Số lượng sinh viên tối đa (tùy chọn)
+  assignedTeacherId   String?   // ID của giảng viên được phân công (null nếu chưa phân công)
+  assignedTeacher     Teacher?  @relation("AssignedClassSections", fields: [assignedTeacherId], references: [id]) // Quan hệ với Giảng viên
+  status              String    @default("CREATED") // Trạng thái: CREATED, OPEN_FOR_REGISTRATION, IN_PROGRESS, COMPLETED, CANCELED
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([code, semesterId]) // Mã lớp học phần là duy nhất trong một học kỳ
+  // Đã bỏ @@unique([code, courseId]) vì @@unique([code, semesterId]) đã bao hàm
+}
+
+
+enum Role {
+  ADMIN
+  ACCOUNTANT
+  DEPARTMENT_HEAD
+  TEACHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+} 
