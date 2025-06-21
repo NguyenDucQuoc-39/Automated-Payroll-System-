@@ -157,7 +157,7 @@ export const updateDegree = async (req: Request, res: Response) => {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return res.status(409).json({ message: 'Dữ liệu bằng cấp đã tồn tại (Tên đầy đủ hoặc tên viết tắt đã được sử dụng).' });
     }
-    res.status(400).json({ message: 'Error updating degree', error: error.message });
+    res.status(400).json({ message: 'Lỗi khi cập nhật bằng cấp', error: error.message });
   }
 };
 

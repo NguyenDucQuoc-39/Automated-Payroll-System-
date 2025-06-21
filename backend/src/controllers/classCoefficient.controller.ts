@@ -8,7 +8,7 @@ export const getAllClassCoefficients = async (req: Request, res: Response) => {
     const data = await prisma.classCoefficient.findMany({ orderBy: { createdAt: 'desc' } });
     res.json(data);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching class coefficients', error });
+    res.status(500).json({ message: 'Lỗi khi lấy dữ liệu hệ số lớp', error });
   }
 };
 
@@ -19,7 +19,7 @@ export const getClassCoefficientById = async (req: Request, res: Response) => {
     if (!data) return res.status(404).json({ message: 'Not found' });
     res.json(data);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching class coefficient', error });
+    res.status(500).json({ message: 'Lỗi khi lấy dữ liệu hệ số lớp', error });
   }
 };
 
@@ -29,7 +29,7 @@ export const createClassCoefficient = async (req: Request, res: Response) => {
     const data = await prisma.classCoefficient.create({ data: { academicYear, minStudents, maxStudents, coefficient, status } });
     res.status(201).json(data);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating class coefficient', error });
+    res.status(500).json({ message: 'Lỗi khi tạo hệ số lớp', error });
   }
 };
 
@@ -40,7 +40,7 @@ export const updateClassCoefficient = async (req: Request, res: Response) => {
     const data = await prisma.classCoefficient.update({ where: { id }, data: { academicYear, minStudents, maxStudents, coefficient, status } });
     res.json(data);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating class coefficient', error });
+    res.status(500).json({ message: 'Lỗi khi cập nhật hệ số lớp', error });
   }
 };
 
@@ -50,6 +50,6 @@ export const deleteClassCoefficient = async (req: Request, res: Response) => {
     await prisma.classCoefficient.delete({ where: { id } });
     res.status(204).send();
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting class coefficient', error });
+    res.status(500).json({ message: 'Lỗi khi xóa hệ số lớp', error });
   }
 }; 

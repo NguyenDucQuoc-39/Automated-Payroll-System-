@@ -214,7 +214,7 @@ export const updateTeacher = async (req: Request, res: Response) => {
     if ((error as any).code === 'P2002' && (error as any).meta?.target.includes('email')) {
       return res.status(400).json({ message: 'Email đã tồn tại.' });
     }
-    res.status(400).json({ message: 'Error updating teacher', error: (error as Error).message });
+    res.status(400).json({ message: 'Lỗi khi cập nhật giảng viên', error: (error as Error).message });
   }
 };
 
@@ -255,7 +255,7 @@ export const deleteTeacher = async (req: Request, res: Response) => {
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting teacher:', error);
-    res.status(400).json({ message: 'Error deleting teacher', error: (error as Error).message });
+    res.status(400).json({ message: 'Lỗi khi xóa giảng viên', error: (error as Error).message });
   }
 };
 
@@ -284,7 +284,7 @@ export const getTeachersByDepartment = async (req: Request, res: Response) => {
     res.json(teachers);
   } catch (error) {
     console.error('Error fetching teachers by department:', error);
-    res.status(500).json({ message: 'Error fetching teachers', error: (error as Error).message });
+    res.status(500).json({ message: 'Lỗi khi lấy dữ liệu giảng viên', error: (error as Error).message });
   }
 };
 
@@ -312,7 +312,7 @@ export const getTeachersNotHead = async (req: Request, res: Response) => {
     res.json(teachers);
   } catch (error) {
     console.error('Error fetching teachers not head:', error);
-    res.status(500).json({ message: 'Error fetching teachers', error: (error as Error).message });
+    res.status(500).json({ message: 'Lỗi khi lấy dữ liệu giảng viên', error: (error as Error).message });
   }
 };
 
@@ -424,7 +424,7 @@ export const importFromExcel = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Import error:', error);
-    return res.status(500).json({ message: 'Error importing teachers' });
+    return res.status(500).json({ message: 'Lỗi khi nhập dữ liệu giảng viên' });
   }
 };
 

@@ -14,9 +14,9 @@ import TeachersPage from './pages/TeachersPage';
 import Statistics from './pages/TeachersStatisticsPage';
 import ClassSectionPage from './pages/ClassSectionPage';
 import ClassSectionStatistics from './pages/ClassSectionStatisticsPage';
-import TietHeSoPage from './pages/TietHeSoPage';
-import BangCapHeSoPage from './pages/BangCapHeSoPage';
-import LopHeSoPage from './pages/LopHeSoPage';
+import TietHeSoPage from './pages/SetingCoursePage';
+import BangCapHeSoPage from './pages/SettingDegreePage';
+import LopHeSoPage from './pages/SetingClassSectionPage';
 import TinhTienDayPage from './pages/TinhTienDayPage';
 
 

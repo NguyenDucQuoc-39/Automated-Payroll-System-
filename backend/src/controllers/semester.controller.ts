@@ -67,7 +67,7 @@ export const createSemester = async (req: Request, res: Response) => {
         return res.status(400).json({ message: `Học kỳ số ${req.body.orderNumber} trong năm học ${req.body.academicYear} đã tồn tại.` });
       }
     }
-    res.status(400).json({ message: 'Error creating semester', error: error.message });
+    res.status(400).json({ message: 'Lỗi khi tạo học kì', error: error.message });
   }
 };
 
@@ -92,7 +92,7 @@ export const getSemesters = async (req: Request, res: Response) => {
     res.json(semesters);
   } catch (error: any) {
     console.error('Error fetching semesters:', error.message);
-    res.status(500).json({ message: 'Error fetching semesters', error: error.message });
+    res.status(500).json({ message: 'Lỗi khi lấy dữ liệu học kì', error: error.message });
   }
 };
 
@@ -110,7 +110,7 @@ export const getSemesterById = async (req: Request, res: Response) => {
     res.json(semester);
   } catch (error: any) {
     console.error('Error fetching semester by ID:', error.message);
-    res.status(500).json({ message: 'Error fetching semester', error: error.message });
+    res.status(500).json({ message: 'Lỗi khi lấy dữ liệu học kì', error: error.message });
   }
 };
 
@@ -171,7 +171,7 @@ export const updateSemester = async (req: Request, res: Response) => {
         });
       }
     }
-    res.status(400).json({ message: 'Error updating semester', error: error.message });
+    res.status(400).json({ message: 'Lỗi khi cập nhật học kì', error: error.message });
   }
 };
 
@@ -192,7 +192,7 @@ export const deleteSemester = async (req: Request, res: Response) => {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
       return res.status(400).json({ message: 'Không thể xóa học kì này vì nó có liên kết với các học phần hoặc thời khóa biểu.' });
     }
-    res.status(400).json({ message: 'Error deleting semester', error: error.message });
+    res.status(400).json({ message: 'Lỗi khi xóa học kì', error: error.message });
   }
 };
 
@@ -213,6 +213,6 @@ export const getAcademicYears = async (req: Request, res: Response) => {
     res.json(uniqueAcademicYears);
   } catch (error: any) {
     console.error('Error fetching academic years:', error.message);
-    res.status(500).json({ message: 'Error fetching academic years', error: error.message });
+    res.status(500).json({ message: 'Lỗi khi lấy dữ liệu năm học', error: error.message });
   }
 };

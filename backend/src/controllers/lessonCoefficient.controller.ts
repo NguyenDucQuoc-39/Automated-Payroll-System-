@@ -8,7 +8,7 @@ export const getAllLessonCoefficients = async (req: Request, res: Response) => {
     const data = await prisma.lessonCoefficient.findMany({ orderBy: { createdAt: 'desc' } });
     res.json(data);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching lesson coefficients', error });
+    res.status(500).json({ message: 'Lỗi khi lấy dữ liệu hệ số giảng dạy', error });
   }
 };
 
@@ -19,7 +19,7 @@ export const getLessonCoefficientById = async (req: Request, res: Response) => {
     if (!data) return res.status(404).json({ message: 'Not found' });
     res.json(data);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching lesson coefficient', error });
+    res.status(500).json({ message: 'Lỗi khi lấy dữ liệu hệ số giảng dạy', error });
   }
 };
 
@@ -29,7 +29,7 @@ export const createLessonCoefficient = async (req: Request, res: Response) => {
     const data = await prisma.lessonCoefficient.create({ data: { academicYear, amount, status } });
     res.status(201).json(data);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating lesson coefficient', error });
+    res.status(500).json({ message: 'Lỗi khi tạo hệ số giảng dạy', error });
   }
 };
 
@@ -40,7 +40,7 @@ export const updateLessonCoefficient = async (req: Request, res: Response) => {
     const data = await prisma.lessonCoefficient.update({ where: { id }, data: { academicYear, amount, status } });
     res.json(data);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating lesson coefficient', error });
+    res.status(500).json({ message: 'Lỗi khi cập nhật hệ số giảng dạy', error });
   }
 };
 
@@ -50,6 +50,6 @@ export const deleteLessonCoefficient = async (req: Request, res: Response) => {
     await prisma.lessonCoefficient.delete({ where: { id } });
     res.status(204).send();
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting lesson coefficient', error });
+    res.status(500).json({ message: 'Lỗi khi xóa hệ số giảng dạy', error });
   }
 }; 

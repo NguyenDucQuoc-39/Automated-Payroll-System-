@@ -1,73 +1,110 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, MenuItem, Select, InputLabel, FormControl, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress, IconButton } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { getClassCoefficients, createClassCoefficient, deleteClassCoefficient } from '../services/classCoefficient.service';
-import { getSemesters } from '../services/semester.service';
+import { Delete as DeleteIcon } from '@mui/icons-material';
+import { getDegreeCoefficients, createDegreeCoefficient, deleteDegreeCoefficient } from '../services/degreeCoefficient.service';
+import { getAcademicYears } from '../services/semester.service';
 
-
-
-const LopHeSoPage = () => {
+const BangCapHeSoPage = () => {
   const [open, setOpen] = useState(false);
   const [year, setYear] = useState('');
-  const [min, setMin] = useState('');
-  const [max, setMax] = useState('');
-  const [coefficient, setCoefficient] = useState('');
+  const [thacSi, setThacSi] = useState('');
+  const [tienSi, setTienSi] = useState('');
+  const [phoGS, setPhoGS] = useState('');
+  const [giaoSu, setGiaoSu] = useState('');
   const [status, setStatus] = useState('');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [semesters, setSemesters] = useState<any[]>([]);
+  const [academicYears, setAcademicYears] = useState<string[]>([]);
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await getClassCoefficients();
+      const res = await getDegreeCoefficients();
       setData(res.data);
-    } catch (e) {}
+    } catch (e) {
+      // handle error
+    }
     setLoading(false);
   };
 
   useEffect(() => {
     fetchData();
-    getSemesters().then((res: any) => setSemesters(res.data));
+    getAcademicYears().then((res: any) => setAcademicYears(res.data));
   }, []);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
   const handleCreate = async () => {
-    if (year && min && max && coefficient && status) {
-      await createClassCoefficient({ academicYear: year, minStudents: Number(min), maxStudents: Number(max), coefficient: Number(coefficient), status });
-      setYear(''); setMin(''); setMax(''); setCoefficient(''); setStatus(''); setOpen(false); fetchData();
+    if (year && thacSi && tienSi && phoGS && giaoSu && status) {
+      await createDegreeCoefficient({ academicYear: year, master: Number(thacSi), doctor: Number(tienSi), associateProfessor: Number(phoGS), professor: Number(giaoSu), status });
+      setYear('');
+      setThacSi('');
+      setTienSi('');
+      setPhoGS('');
+      setGiaoSu('');
+      setStatus('');
+      setOpen(false);
+      fetchData();
     }
   };
 
   const handleDelete = async (id: string) => {
-    await deleteClassCoefficient(id);
+    await deleteDegreeCoefficient(id);
     fetchData();
   };
 
   return (
     <div>
-      <h2>Thiết Lập Hệ Số Lớp</h2>
+      <h2>Thiết Lập Hệ Số Bằng Cấp</h2>
       <Button variant="contained" color="primary" onClick={handleOpen}>Thêm thiết lập</Button>
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>Thêm Thiết Lập</DialogTitle>
         <DialogContent>
           <FormControl fullWidth margin="normal">
-            <InputLabel id="year-label">Chọn Năm</InputLabel>
+            <InputLabel id="year-label">Chọn Năm Học Áp Dụng</InputLabel>
             <Select
               labelId="year-label"
               value={year}
               label="Chọn Năm Học Áp Dụng"
               onChange={e => setYear(e.target.value)}
             >
-              {semesters.map((s: any) => (
-                <MenuItem key={s.id} value={s.academicYear}>{s.academicYear}</MenuItem>
+              {academicYears.map((academicYear: string) => (
+                <MenuItem key={academicYear} value={academicYear}>{academicYear}</MenuItem>
               ))}
             </Select>
           </FormControl>
-          <TextField margin="normal" label="Số lượng sinh viên nhỏ nhất" type="number" fullWidth value={min} onChange={e => setMin(e.target.value)} />
-          <TextField margin="normal" label="Số lượng sinh viên lớn nhất" type="number" fullWidth value={max} onChange={e => setMax(e.target.value)} />
-          <TextField margin="normal" label="Hệ Số" type="number" fullWidth value={coefficient} onChange={e => setCoefficient(e.target.value)} />
+          <TextField
+            margin="normal"
+            label="Thạc Sĩ (Hệ số)"
+            type="number"
+            fullWidth
+            value={thacSi}
+            onChange={e => setThacSi(e.target.value)}
+          />
+          <TextField
+            margin="normal"
+            label="Tiến Sĩ (Hệ số)"
+            type="number"
+            fullWidth
+            value={tienSi}
+            onChange={e => setTienSi(e.target.value)}
+          />
+          <TextField
+            margin="normal"
+            label="Phó Giáo Sư (Hệ số)"
+            type="number"
+            fullWidth
+            value={phoGS}
+            onChange={e => setPhoGS(e.target.value)}
+          />
+          <TextField
+            margin="normal"
+            label="Giáo Sư (Hệ số)"
+            type="number"
+            fullWidth
+            value={giaoSu}
+            onChange={e => setGiaoSu(e.target.value)}
+          />
           <FormControl fullWidth margin="normal">
             <InputLabel id="status-label">Trạng Thái</InputLabel>
             <Select
@@ -76,8 +113,8 @@ const LopHeSoPage = () => {
               label="Trạng Thái"
               onChange={e => setStatus(e.target.value)}
             >
-              <MenuItem value="ACTIVE">Đang Áp Dụng</MenuItem>
-              <MenuItem value="INACTIVE">Chưa Áp Dụng</MenuItem>
+              <MenuItem value="ACTIVE">Hoạt Động</MenuItem>
+              <MenuItem value="INACTIVE">Không Hoạt Động</MenuItem>
             </Select>
           </FormControl>
         </DialogContent>
@@ -93,9 +130,10 @@ const LopHeSoPage = () => {
               <TableRow>
                 <TableCell>STT</TableCell>
                 <TableCell>Năm Học</TableCell>
-                <TableCell align="center">Số lượng sinh viên nhỏ nhất</TableCell>
-                <TableCell align="center">Số lượng sinh viên lớn nhất</TableCell>
-                <TableCell>Hệ Số</TableCell>
+                <TableCell>Thạc Sĩ</TableCell>
+                <TableCell>Tiến Sĩ</TableCell>
+                <TableCell>Phó Giáo Sư</TableCell>
+                <TableCell>Giáo Sư</TableCell>
                 <TableCell>Trạng Thái</TableCell>
                 <TableCell>Hành Động</TableCell>
               </TableRow>
@@ -105,12 +143,12 @@ const LopHeSoPage = () => {
                 <TableRow key={row.id}>
                   <TableCell>{idx + 1}</TableCell>
                   <TableCell>{row.academicYear}</TableCell>
-                  <TableCell align="center">{row.minStudents}</TableCell>
-                  <TableCell align="center">{row.maxStudents}</TableCell>
-                  <TableCell>{row.coefficient.toFixed(1)}</TableCell>
+                  <TableCell>{row.master}</TableCell>
+                  <TableCell>{row.doctor}</TableCell>
+                  <TableCell>{row.associateProfessor}</TableCell>
+                  <TableCell>{row.professor}</TableCell>
                   <TableCell>{row.status === 'ACTIVE' ? 'Đang áp dụng' : 'Chưa áp dụng'}</TableCell>
                   <TableCell>
-                    <IconButton color="primary"><EditIcon /></IconButton>
                     <IconButton color="secondary" onClick={() => handleDelete(row.id)}><DeleteIcon /></IconButton>
                   </TableCell>
                 </TableRow>
@@ -123,4 +161,4 @@ const LopHeSoPage = () => {
   );
 };
 
-export default LopHeSoPage; 
+export default BangCapHeSoPage; 

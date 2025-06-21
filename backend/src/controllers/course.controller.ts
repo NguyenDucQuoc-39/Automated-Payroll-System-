@@ -30,7 +30,7 @@ export const createCourse = async (req: Request, res: Response) => {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return res.status(400).json({ message: 'Mã học phần đã tồn tại trong khoa này.' });
     }
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi khi tạo học phần', error: error.message });
   }
 };
 
@@ -72,7 +72,7 @@ export const getCourses = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Lỗi khi lấy học phần:', error);
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi khi lấy dữ liệu học phần', error: error.message });
   }
 };
 
@@ -92,7 +92,7 @@ export const getCourseById = async (req: Request, res: Response) => {
     res.json(course);
   } catch (error: any) {
     console.error('Lỗi khi lấy học phần theo ID:', error);
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi khi lấy dữ liệu học phần', error: error.message });
   }
 };
 
@@ -125,7 +125,7 @@ export const updateCourse = async (req: Request, res: Response) => {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return res.status(400).json({ message: 'Mã học phần đã tồn tại trong khoa này.' });
     }
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi khi cập nhật học phần', error: error.message });
   }
 };
 
@@ -142,6 +142,6 @@ export const deleteCourse = async (req: Request, res: Response) => {
      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
         return res.status(404).json({ message: 'Không tìm thấy học phần để xóa.' });
     }
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: 'Lỗi khi xóa học phần', error: error.message });
   }
 };

@@ -109,7 +109,7 @@ const TinhTienDayPage = () => {
           {departments.map((d: any) => <MenuItem key={d.id} value={d.id}>{d.fullName}</MenuItem>)}
         </Select>
       </FormControl>
-      <Button variant="contained" onClick={handleSearch} disabled={!selectedSemester || !selectedDepartment}>Tìm kiếm</Button>
+      <Button variant="contained" sx={{ mt: 1}} onClick={handleSearch} disabled={!selectedSemester || !selectedDepartment}>Tìm kiếm</Button>
       {loading ? <CircularProgress sx={{ mt: 2 }} /> : (
         <TableContainer component={Paper} sx={{ mt: 4 }}>
           <Table>
@@ -132,7 +132,7 @@ const TinhTienDayPage = () => {
                   <TableCell>{t.degree?.fullName}</TableCell>
                   <TableCell>{t.department?.fullName}</TableCell>
                   <TableCell>
-                    <Button variant="outlined" onClick={() => handleOpenDetail(t)}>Chi tiết</Button>
+                    <Button variant="contained" color="primary" onClick={() => handleOpenDetail(t)}>Chi tiết</Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -163,16 +163,16 @@ const TinhTienDayPage = () => {
                     <TableCell>{idx + 1}</TableCell>
                     <TableCell>{cs.code}</TableCell>
                     <TableCell>{cs.name}</TableCell>
-                    <TableCell>{getClassCoefficient(cs.maxStudents || 0)}</TableCell>
-                    <TableCell>{getDegreeCoefficient(selectedTeacher.degree.type)}</TableCell>
-                    <TableCell>{cs.course.totalHours}</TableCell>
+                    <TableCell align="center">{getClassCoefficient(cs.maxStudents || 0)}</TableCell>
+                    <TableCell align="center">{getDegreeCoefficient(selectedTeacher.degree.type)}</TableCell>
+                    <TableCell align="center">{cs.course.totalHours}</TableCell>
                     <TableCell>{lessonCoefficient ? lessonCoefficient.amount : ''}</TableCell>
-                    <TableCell>{calcClassSectionSalary(cs).toLocaleString()}</TableCell>
+                    <TableCell>{calcClassSectionSalary(cs).toLocaleString()} VNĐ</TableCell>
                   </TableRow>
                 ))}
                 <TableRow>
                   <TableCell colSpan={6} align="right"><b>Tổng tiền dạy</b></TableCell>
-                  <TableCell><b>{totalSalary.toLocaleString()}</b></TableCell>
+                  <TableCell><b>{totalSalary.toLocaleString()} VNĐ</b></TableCell>
                 </TableRow>
               </TableBody>
             </Table>

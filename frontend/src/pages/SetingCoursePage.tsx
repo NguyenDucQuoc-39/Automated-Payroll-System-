@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, MenuItem, Select, InputLabel, FormControl, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress, IconButton } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon } from '@mui/icons-material';
 import { getLessonCoefficients, createLessonCoefficient, deleteLessonCoefficient } from '../services/lessonCoefficient.service';
-import { getSemesters } from '../services/semester.service';
+import { getAcademicYears } from '../services/semester.service';
 
 const TietHeSoPage = () => {
   const [open, setOpen] = useState(false);
@@ -11,7 +11,7 @@ const TietHeSoPage = () => {
   const [status, setStatus] = useState('');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [semesters, setSemesters] = useState<any[]>([]);
+  const [academicYears, setAcademicYears] = useState<string[]>([]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -26,7 +26,7 @@ const TietHeSoPage = () => {
 
   useEffect(() => {
     fetchData();
-    getSemesters().then(res => setSemesters(res.data));
+    getAcademicYears().then(res => setAcademicYears(res.data));
   }, []);
 
   const handleOpen = () => setOpen(true);
@@ -56,15 +56,15 @@ const TietHeSoPage = () => {
         <DialogTitle>Thêm Thiết Lập</DialogTitle>
         <DialogContent>
           <FormControl fullWidth margin="normal">
-            <InputLabel id="year-label">Chọn Học Kỳ Áp Dụng</InputLabel>
+            <InputLabel id="year-label">Chọn Năm Học Áp Dụng</InputLabel>
             <Select
               labelId="year-label"
               value={year}
-              label="Chọn Học Kỳ Áp Dụng"
+              label="Chọn Năm Học Áp Dụng"
               onChange={e => setYear(e.target.value)}
             >
-              {semesters.map((s: any) => (
-                <MenuItem key={s.id} value={s.academicYear}>{s.academicYear} - {s.name}</MenuItem>
+              {academicYears.map((academicYear: string) => (
+                <MenuItem key={academicYear} value={academicYear}>{academicYear}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -114,7 +114,6 @@ const TietHeSoPage = () => {
                   <TableCell>{row.amount}</TableCell>
                   <TableCell>{row.status === 'ACTIVE' ? 'Đang áp dụng' : 'Chưa áp dụng'}</TableCell>
                   <TableCell>
-                    <IconButton color="primary"><EditIcon /></IconButton>
                     <IconButton color="secondary" onClick={() => handleDelete(row.id)}><DeleteIcon /></IconButton>
                   </TableCell>
                 </TableRow>
