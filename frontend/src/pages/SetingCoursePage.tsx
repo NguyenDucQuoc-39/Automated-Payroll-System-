@@ -1,127 +1,142 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, MenuItem, Select, InputLabel, FormControl, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress, IconButton } from '@mui/material';
-import { Delete as DeleteIcon } from '@mui/icons-material';
+import { Button, Modal, Form, InputNumber, Select, Table, Spin, message, Popconfirm } from 'antd';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { getLessonCoefficients, createLessonCoefficient, deleteLessonCoefficient } from '../services/lessonCoefficient.service';
 import { getAcademicYears } from '../services/semester.service';
 
+const { Option } = Select;
+
 const TietHeSoPage = () => {
   const [open, setOpen] = useState(false);
-  const [year, setYear] = useState('');
-  const [amount, setAmount] = useState('');
-  const [status, setStatus] = useState('');
+  const [form] = Form.useForm();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [academicYears, setAcademicYears] = useState<string[]>([]);
+  const [filterYear, setFilterYear] = useState('');
 
-  const fetchData = async () => {
+  const fetchData = async (yearFilter?: string) => {
     setLoading(true);
     try {
       const res = await getLessonCoefficients();
-      setData(res.data);
+      let rows = res.data;
+      if (yearFilter) {
+        rows = rows.filter((item: any) => item.academicYear === yearFilter);
+      }
+      setData(rows);
     } catch (e) {
-      // handle error
+      message.error('Không lấy được dữ liệu');
     }
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchData();
-    getAcademicYears().then(res => setAcademicYears(res.data));
-  }, []);
+    fetchData(filterYear);
+    getAcademicYears().then(res => {
+      if(Array.isArray(res.data)) {
+        setAcademicYears(res.data);
+      } else {
+        message.error('Không lấy được dữ liệu năm học');
+      }
+    });
+  }, [filterYear]);
 
   const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleClose = () => {
+    setOpen(false);
+    form.resetFields();
+  };
 
   const handleCreate = async () => {
-    if (year && amount && status) {
-      await createLessonCoefficient({ academicYear: year, amount: Number(amount), status });
-      setYear('');
-      setAmount('');
-      setStatus('');
-      setOpen(false);
-      fetchData();
+    try {
+      const values = await form.validateFields();
+      if (values.amount < 0) {
+        message.error('Số tiền một tiết không được là số âm!');
+        return;
+      }
+      await createLessonCoefficient({ academicYear: values.year, amount: values.amount, status: values.status });
+      handleClose();
+      fetchData(filterYear);
+      message.success('Thêm thiết lập thành công!');
+    } catch (err) {
+      // validateFields sẽ tự báo lỗi
     }
   };
 
   const handleDelete = async (id: string) => {
     await deleteLessonCoefficient(id);
-    fetchData();
+    fetchData(filterYear);
+    message.success('Xóa thành công!');
   };
+
+  const columns = [
+    { title: 'STT', dataIndex: 'index', key: 'index', render: (_: any, __: any, idx: number) => idx + 1 },
+    { title: 'Năm Học', dataIndex: 'academicYear', key: 'academicYear' },
+    { title: 'Số Tiền Một Tiết', dataIndex: 'amount', key: 'amount' },
+    { title: 'Trạng Thái', dataIndex: 'status', key: 'status', render: (v: string) => v === 'ACTIVE' ? 'Đang áp dụng' : 'Chưa áp dụng' },
+    {
+      title: 'Hành Động',
+      key: 'action',
+      render: (_: any, row: any) => (
+        <Popconfirm title="Bạn chắc chắn muốn xóa?" onConfirm={() => handleDelete(row.id)} okText="Xóa" cancelText="Hủy">
+          <Button danger icon={<DeleteOutlined />} size="small" />
+        </Popconfirm>
+      ),
+    },
+  ];
 
   return (
     <div>
       <h2>Thiết Lập Hệ Số Tiết</h2>
-      <Button variant="contained" color="primary" onClick={handleOpen}>Thêm thiết lập</Button>
-      <Dialog open={open} onClose={handleClose}>
-        <DialogTitle>Thêm Thiết Lập</DialogTitle>
-        <DialogContent>
-          <FormControl fullWidth margin="normal">
-            <InputLabel id="year-label">Chọn Năm Học Áp Dụng</InputLabel>
-            <Select
-              labelId="year-label"
-              value={year}
-              label="Chọn Năm Học Áp Dụng"
-              onChange={e => setYear(e.target.value)}
-            >
+      <div style={{ marginBottom: 16, display: 'flex', gap: 16 }}>
+        <Select
+          style={{ minWidth: 200 }}
+          placeholder="Lọc theo năm học"
+          value={filterYear}
+          onChange={setFilterYear}
+          allowClear
+        >
+          <Option value="">Tất cả</Option>
+          {academicYears.map((y: string) => <Option key={y} value={y}>{y}</Option>)}
+        </Select>
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleOpen}>Thêm thiết lập</Button>
+      </div>
+      <Modal
+        open={open}
+        title="Thêm Thiết Lập"
+        onCancel={handleClose}
+        onOk={handleCreate}
+        okText="Tạo Thiết Lập"
+        cancelText="Hủy"
+        destroyOnClose
+      >
+        <Form form={form} layout="vertical" preserve={false}>
+          <Form.Item name="year" label="Chọn Năm Học Áp Dụng" rules={[{ required: true, message: 'Vui lòng chọn năm học!' }]}> 
+            <Select placeholder="Chọn năm học">
               {academicYears.map((academicYear: string) => (
-                <MenuItem key={academicYear} value={academicYear}>{academicYear}</MenuItem>
+                <Option key={academicYear} value={academicYear}>{academicYear}</Option>
               ))}
             </Select>
-          </FormControl>
-          <TextField
-            margin="normal"
-            label="Số tiền một tiết"
-            type="number"
-            fullWidth
-            value={amount}
-            onChange={e => setAmount(e.target.value)}
-          />
-          <FormControl fullWidth margin="normal">
-            <InputLabel id="status-label">Trạng Thái</InputLabel>
-            <Select
-              labelId="status-label"
-              value={status}
-              label="Trạng Thái"
-              onChange={e => setStatus(e.target.value)}
-            >
-              <MenuItem value="ACTIVE">Hoạt Động</MenuItem>
-              <MenuItem value="INACTIVE">Không Hoạt Động</MenuItem>
+          </Form.Item>
+          <Form.Item name="amount" label="Số tiền một tiết" rules={[{ required: true, message: 'Vui lòng nhập số tiền!' }]}> 
+            <InputNumber min={0} style={{ width: '100%' }} placeholder="Nhập số tiền một tiết" />
+          </Form.Item>
+          <Form.Item name="status" label="Trạng Thái" rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}> 
+            <Select placeholder="Chọn trạng thái">
+              <Option value="ACTIVE">Hoạt Động</Option>
+              <Option value="INACTIVE">Không Hoạt Động</Option>
             </Select>
-          </FormControl>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Hủy</Button>
-          <Button onClick={handleCreate} variant="contained">Tạo Thiết Lập</Button>
-        </DialogActions>
-      </Dialog>
-      {loading ? <CircularProgress /> : (
-        <TableContainer component={Paper} sx={{ marginTop: 4 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>STT</TableCell>
-                <TableCell>Năm Học</TableCell>
-                <TableCell>Số Tiền Một Tiết</TableCell>
-                <TableCell>Trạng Thái</TableCell>
-                <TableCell>Hành Động</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data.map((row, idx) => (
-                <TableRow key={row.id}>
-                  <TableCell>{idx + 1}</TableCell>
-                  <TableCell>{row.academicYear}</TableCell>
-                  <TableCell>{row.amount}</TableCell>
-                  <TableCell>{row.status === 'ACTIVE' ? 'Đang áp dụng' : 'Chưa áp dụng'}</TableCell>
-                  <TableCell>
-                    <IconButton color="secondary" onClick={() => handleDelete(row.id)}><DeleteIcon /></IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+          </Form.Item>
+        </Form>
+      </Modal>
+      <Spin spinning={loading} tip="Đang tải dữ liệu...">
+        <Table
+          columns={columns}
+          dataSource={data}
+          rowKey="id"
+          pagination={false}
+          style={{ marginTop: 24 }}
+        />
+      </Spin>
     </div>
   );
 };

@@ -3,7 +3,7 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, M
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { getClassCoefficients, createClassCoefficient, deleteClassCoefficient } from '../services/classCoefficient.service';
 import { getAcademicYears } from '../services/semester.service';
-
+import { message } from 'antd';
 
 const LopHeSoPage = () => {
   const [open, setOpen] = useState(false);
@@ -15,38 +15,59 @@ const LopHeSoPage = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [academicYears, setAcademicYears] = useState<string[]>([]);
-  const fetchData = async () => {
+  const [filterYear, setFilterYear] = useState('');
+
+  const fetchData = async (yearFilter?: string) => {
     setLoading(true);
     try {
       const res = await getClassCoefficients();
-      setData(res.data);
-    } catch (e) {}
+      let rows = res.data;
+      if (yearFilter) {
+        rows = rows.filter((item: any) => item.academicYear === yearFilter);
+      }
+      setData(rows);
+    } catch (e) { message.error('Không lấy được dữ liệu'); }
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(filterYear);
     getAcademicYears().then((res: any) => setAcademicYears(res.data));
-  }, []);
+  }, [filterYear]);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
   const handleCreate = async () => {
-    if (year && min && max && coefficient && status) {
-      await createClassCoefficient({ academicYear: year, minStudents: Number(min), maxStudents: Number(max), coefficient: Number(coefficient), status });
-      setYear(''); setMin(''); setMax(''); setCoefficient(''); setStatus(''); setOpen(false); fetchData();
+    if (!year || !min || !max || !coefficient || !status) {
+      message.error('Vui lòng nhập đầy đủ thông tin!');
+      return;
     }
+    if ([min, max, coefficient].some(val => Number(val) < 0)) {
+      message.error('Các giá trị số không được là số âm!');
+      return;
+    }
+    await createClassCoefficient({ academicYear: year, minStudents: Number(min), maxStudents: Number(max), coefficient: Number(coefficient), status });
+    setYear(''); setMin(''); setMax(''); setCoefficient(''); setStatus(''); setOpen(false); fetchData(filterYear);
   };
 
   const handleDelete = async (id: string) => {
     await deleteClassCoefficient(id);
-    fetchData();
+    fetchData(filterYear);
   };
 
   return (
     <div>
       <h2>Thiết Lập Hệ Số Lớp</h2>
+      <div style={{ marginBottom: 16 }}>
+        <FormControl style={{ minWidth: 200 }}>
+          <InputLabel>Lọc theo năm học</InputLabel>
+          <Select value={filterYear} label="Lọc theo năm học" onChange={e => setFilterYear(e.target.value)}>
+            <MenuItem value="">Tất cả</MenuItem>
+            {academicYears.map((y: string) => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+          </Select>
+        </FormControl>
+      </div>
       <Button variant="contained" color="primary" onClick={handleOpen}>Thêm thiết lập</Button>
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle>Thêm Thiết Lập</DialogTitle>
