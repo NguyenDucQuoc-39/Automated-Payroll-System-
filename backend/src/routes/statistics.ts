@@ -1,5 +1,10 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import {
+  getTeacherSalaryByYear,
+  getTeacherSalaryByDepartment,
+  getTeacherSalaryBySchool
+} from '../controllers/statistics.controller';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -116,5 +121,12 @@ router.get('/detailed', async (req, res) => {
     res.status(500).json({ message: 'Error fetching detailed statistics' });
   }
 });
+
+// Báo cáo: Tiền dạy của giảng viên trong một năm
+router.get('/teacher-year', getTeacherSalaryByYear);
+// Báo cáo: Tiền dạy của giảng viên một khoa
+router.get('/teacher-department', getTeacherSalaryByDepartment);
+// Báo cáo: Tiền dạy của giảng viên toàn trường
+router.get('/teacher-school', getTeacherSalaryBySchool);
 
 export default router; 

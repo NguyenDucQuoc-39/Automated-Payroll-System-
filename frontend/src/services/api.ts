@@ -40,4 +40,16 @@ api.interceptors.response.use(
   }
 );
 
-export default api; 
+export default api;
+
+// Báo cáo: Tiền dạy của giảng viên trong một năm
+export const getTeacherSalaryByYear = (year: string) =>
+  api.get(`/statistics/teacher-year`, { params: { year } });
+
+// Báo cáo: Tiền dạy của giảng viên một khoa
+export const getTeacherSalaryByDepartment = (departmentId: string, year?: string, semesterId?: string) =>
+  api.get(`/statistics/teacher-department`, { params: { departmentId, year, semesterId } });
+
+// Báo cáo: Tiền dạy của giảng viên toàn trường
+export const getTeacherSalaryBySchool = (year?: string, semesterId?: string) =>
+  api.get(`/statistics/teacher-school`, { params: { year, semesterId } }); 
