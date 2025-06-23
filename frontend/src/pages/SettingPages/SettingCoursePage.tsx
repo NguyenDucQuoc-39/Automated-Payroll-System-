@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Modal, Form, InputNumber, Select, Table, Spin, message, Popconfirm } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { getLessonCoefficients, createLessonCoefficient, deleteLessonCoefficient } from '../services/lessonCoefficient.service';
-import { getAcademicYears } from '../services/semester.service';
+import { getLessonCoefficients, createLessonCoefficient, deleteLessonCoefficient } from '../../services/lessonCoefficient.service';
+import { getAcademicYears } from '../../services/semester.service';
 
 const { Option } = Select;
 

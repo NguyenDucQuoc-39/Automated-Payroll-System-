@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, MenuItem, Select, InputLabel, FormControl, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress, IconButton } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
-import { getClassCoefficients, createClassCoefficient, deleteClassCoefficient } from '../services/classCoefficient.service';
-import { getAcademicYears } from '../services/semester.service';
+import { getClassCoefficients, createClassCoefficient, deleteClassCoefficient } from '../../services/classCoefficient.service';
+import { getAcademicYears } from '../../services/semester.service';
 import { message } from 'antd';
 
 const LopHeSoPage = () => {

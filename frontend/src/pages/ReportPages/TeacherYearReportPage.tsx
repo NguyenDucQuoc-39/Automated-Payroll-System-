@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { getTeacherSalaryByYear } from '../services/api';
+import { getTeacherSalaryByYear } from '../../services/api';
 import { Select, Button, Table, Typography, message } from 'antd';
-import api from '../services/api';
+import api from '../../services/api';
 
 const { Title } = Typography;
 

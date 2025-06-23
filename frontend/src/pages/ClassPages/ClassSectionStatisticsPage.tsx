@@ -25,8 +25,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import api from '../services/api';
-import { ClassSectionStatisticsData } from '../types/typeFrontend';
+import api from '../../services/api';
+import { ClassSectionStatisticsData } from '../../types/typeFrontend';
 
 const ClassSectionStatisticsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);

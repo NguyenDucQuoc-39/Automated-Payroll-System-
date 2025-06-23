@@ -26,10 +26,10 @@ import {
   SelectChangeEvent,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
-import api from '../services/api';
-import { RootState } from '../store';
+import api from '../../services/api';
+import { RootState } from '../../store';
 import { message } from 'antd';
-import { CreateSemesterInput, UpdateSemesterInput, Semester } from '../types/typeFrontend';
+import { CreateSemesterInput, UpdateSemesterInput, Semester } from '../../types/typeFrontend';
 
 const SEMESTER_NAMES = [
   'Học Kì 1',

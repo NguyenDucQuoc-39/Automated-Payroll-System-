@@ -63,6 +63,7 @@ const MainLayout: React.FC = () => {
   const [infoMenuOpen, setInfoMenuOpen] = useState(false);
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
   const [salaryMenuOpen, setSalaryMenuOpen] = useState(false);
+  const [reportMenuOpen, setReportMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
@@ -94,6 +95,10 @@ const MainLayout: React.FC = () => {
 
   const handleSalaryMenuClick = () => {
     setSalaryMenuOpen(!salaryMenuOpen);
+  };
+
+  const handleReportMenuClick = () => {
+    setReportMenuOpen(!reportMenuOpen);
   };
 
   const menuItems = [
@@ -361,6 +366,28 @@ const MainLayout: React.FC = () => {
                   <ListItemText primary="Tính Tiền Dạy" />
                 </ListItemButton>
               </ListItem>
+            </List>
+          </Collapse>
+
+          <ListItemButton onClick={() => setReportMenuOpen(!reportMenuOpen)} selected={location.pathname.startsWith('/report')}>
+            <ListItemIcon sx={{ color: 'white' }}><AssessmentIcon /></ListItemIcon>
+            <ListItemText primary="Báo cáo" />
+            {reportMenuOpen ? <ExpandLess /> : <ExpandMore />}
+          </ListItemButton>
+          <Collapse in={reportMenuOpen} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              <ListItemButton sx={{ pl: 4 }} onClick={() => navigate('/report/teacher-year')} selected={location.pathname === '/report/teacher-year'}>
+                <ListItemIcon sx={{ color: 'white' }}><MoneyIcon /></ListItemIcon>
+                <ListItemText primary="Tiền dạy của giảng viên trong một năm" />
+              </ListItemButton>
+              <ListItemButton sx={{ pl: 4 }} onClick={() => navigate('/report/teacher-department')} selected={location.pathname === '/report/teacher-department'}>
+                <ListItemIcon sx={{ color: 'white' }}><MoneyIcon /></ListItemIcon>
+                <ListItemText primary="Tiền dạy của giảng viên một khoa" />
+              </ListItemButton>
+              <ListItemButton sx={{ pl: 4 }} onClick={() => navigate('/report/teacher-school')} selected={location.pathname === '/report/teacher-school'}>
+                <ListItemIcon sx={{ color: 'white' }}><MoneyIcon /></ListItemIcon>
+                <ListItemText primary="Tiền dạy của giảng viên toàn trường" />
+              </ListItemButton>
             </List>
           </Collapse>
         </List>

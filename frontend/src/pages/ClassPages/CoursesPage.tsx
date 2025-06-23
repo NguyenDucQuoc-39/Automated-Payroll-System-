@@ -32,8 +32,8 @@ import {
   Search as SearchIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
-import api from '../services/api';
-import { RootState } from '../store';
+import api from '../../services/api';
+import { RootState } from '../../store';
 import { useSelector } from 'react-redux';
 import { message } from 'antd';
 

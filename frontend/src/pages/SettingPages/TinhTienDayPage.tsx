@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress } from '@mui/material';
-import { getAllDepartments } from '../services/department.service';
-import { getAcademicYears, getSemesters } from '../services/semester.service';
-import { getTeachersByDepartment } from '../services/teacher.service';
-import { getClassSections } from '../services/classSection.service';
-import { getLessonCoefficients } from '../services/lessonCoefficient.service';
-import { getDegreeCoefficients } from '../services/degreeCoefficient.service';
-import { getClassCoefficients } from '../services/classCoefficient.service';
+import { getAllDepartments } from '../../services/department.service';
+import { getAcademicYears, getSemesters } from '../../services/semester.service';
+import { getTeachersByDepartment } from '../../services/teacher.service';
+import { getClassSections } from '../../services/classSection.service';
+import { getLessonCoefficients } from '../../services/lessonCoefficient.service';
+import { getDegreeCoefficients } from '../../services/degreeCoefficient.service';
+import { getClassCoefficients } from '../../services/classCoefficient.service';
 
 const TinhTienDayPage = () => {
   const [departments, setDepartments] = useState<any[]>([]);
@@ -109,7 +109,7 @@ const TinhTienDayPage = () => {
           {departments.map((d: any) => <MenuItem key={d.id} value={d.id}>{d.fullName}</MenuItem>)}
         </Select>
       </FormControl>
-      <Button variant="contained" sx={{ mt: 1}} onClick={handleSearch} disabled={!selectedSemester || !selectedDepartment}>Tìm kiếm</Button>
+      <Button variant="contained" sx={{ mt: 1}} onClick={handleSearch} disabled={!selectedSemester || !selectedDepartment}>Xem báo cáo</Button>
       {loading ? <CircularProgress sx={{ mt: 2 }} /> : (
         <TableContainer component={Paper} sx={{ mt: 4 }}>
           <Table>
@@ -163,9 +163,9 @@ const TinhTienDayPage = () => {
                     <TableCell>{idx + 1}</TableCell>
                     <TableCell>{cs.code}</TableCell>
                     <TableCell>{cs.name}</TableCell>
-                    <TableCell align="center">{getClassCoefficient(cs.maxStudents || 0)}</TableCell>
-                    <TableCell align="center">{getDegreeCoefficient(selectedTeacher.degree.type)}</TableCell>
-                    <TableCell align="center">{cs.course.totalHours}</TableCell>
+                    <TableCell align="center">{getClassCoefficient(cs.maxStudents || 0).toFixed(1)}</TableCell>
+                    <TableCell align="center"> {getDegreeCoefficient(selectedTeacher.degree.type).toFixed(1)}</TableCell>
+                    <TableCell align="center"> {cs.course.totalHours}</TableCell>
                     <TableCell>{lessonCoefficient ? lessonCoefficient.amount : ''}</TableCell>
                     <TableCell>{calcClassSectionSalary(cs).toLocaleString()} VNĐ</TableCell>
                   </TableRow>

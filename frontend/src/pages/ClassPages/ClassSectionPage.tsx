@@ -29,13 +29,13 @@ import {
 } from '@mui/material';
 import { SelectChangeEvent } from '@mui/material/Select';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
-import api from '../services/api';
-import { RootState } from '../store';
+import api from '../../services/api';
+import { RootState } from '../../store';
 import { useSelector } from 'react-redux';
 import { message } from 'antd';
-import { ClassSection, Semester, Course, Department, Teacher } from '../types/typeFrontend'; // Đảm bảo đúng đường dẫn tới types của bạn
-import { getClassSections, updateClassSection } from '../services/classSection.service';
-import { getTeachersByDepartment } from '../services/teacher.service';
+import { ClassSection, Semester, Course, Department, Teacher } from '../../types/typeFrontend'; // Đảm bảo đúng đường dẫn tới types của bạn
+import { getClassSections, updateClassSection } from '../../services/classSection.service';
+import { getTeachersByDepartment } from '../../services/teacher.service';
 
 // Định nghĩa interface cho phản hồi API của departments nếu nó có cấu trúc phân trang
 interface DepartmentApiResponse {

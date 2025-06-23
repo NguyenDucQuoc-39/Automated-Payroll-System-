@@ -26,7 +26,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import api from '../services/api';
+import api from '../../services/api';
 
 interface PieLabelProps {
   name: string;
