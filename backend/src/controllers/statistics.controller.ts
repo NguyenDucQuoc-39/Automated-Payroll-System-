@@ -253,3 +253,100 @@ export const getTeacherSalaryBySchool = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Lỗi khi lấy báo cáo tiền dạy toàn trường', error });
   }
 }; 
+
+// NEW: Báo cáo tiền lương cá nhân của giảng viên đang đăng nhập
+export const getPersonalTeacherSalary = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as any;
+    const userId: string | undefined = authReq.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const me = await prisma.teacher.findFirst({
+      where: { userId },
+      include: { degree: true },
+    });
+    if (!me) {
+      return res.status(404).json({ message: 'Teacher profile not found' });
+    }
+
+    const { mode = 'year', year, month, semesterId } = req.query as any;
+
+    let semesterIds: string[] = [];
+    let academicYear = '';
+
+    if (mode === 'semester') {
+      if (!semesterId || typeof semesterId !== 'string') {
+        return res.status(400).json({ message: 'Thiếu học kỳ (semesterId)' });
+      }
+      semesterIds = [semesterId];
+      const sem = await prisma.semester.findUnique({ where: { id: semesterId } });
+      academicYear = sem?.academicYear || '';
+    } else {
+      if (!year || typeof year !== 'string') {
+        return res.status(400).json({ message: 'Thiếu hoặc sai định dạng năm học (year)' });
+      }
+      academicYear = year;
+      const semesters = await prisma.semester.findMany({ where: { academicYear: year }, select: { id: true } });
+      semesterIds = semesters.map(s => s.id);
+    }
+
+    if (semesterIds.length === 0) {
+      return res.json({ details: [], total: 0 });
+    }
+
+    const lessonAmount = await getLessonCoefficient(academicYear);
+    const degreeCoeff = await getDegreeCoefficient(academicYear, me.degree.type as DegreeTypeEnum);
+
+    const classSections = await prisma.classSection.findMany({
+      where: {
+        semesterId: { in: semesterIds },
+        assignedTeacherId: me.id,
+      },
+      include: {
+        course: { include: { department: true } },
+        semester: true,
+      },
+    });
+
+    // Note: không có dữ liệu lịch theo tháng -> nếu mode=month, lọc theo tháng của ngày bắt đầu/kết thúc học kỳ
+    let filtered = classSections;
+    if (mode === 'month' && month) {
+      const monthNum = parseInt(month as string, 10);
+      filtered = classSections.filter(cs => {
+        const start = new Date(cs.semester.startDate as any);
+        const end = new Date(cs.semester.endDate as any);
+        return start.getMonth() + 1 <= monthNum && end.getMonth() + 1 >= monthNum;
+      });
+    }
+
+    let total = 0;
+    const details = await Promise.all(filtered.map(async (cs) => {
+      const studentCount = cs.maxStudents || 1;
+      const classCoeff = await getClassCoefficient(academicYear, studentCount);
+      const hours = cs.course.totalHours;
+      const subtotal = hours * lessonAmount * degreeCoeff * classCoeff;
+      total += subtotal;
+      return {
+        classSectionId: cs.id,
+        code: cs.code,
+        name: cs.name,
+        courseName: cs.course.name,
+        department: cs.course.department.fullName,
+        academicYear: cs.semester.academicYear,
+        semesterName: cs.semester.name,
+        totalHours: hours,
+        lessonAmount,
+        degreeCoeff,
+        classCoeff,
+        subtotal,
+      };
+    }));
+
+    res.json({ total, details });
+  } catch (error: any) {
+    console.error('Error getting personal teacher salary:', error.message);
+    res.status(500).json({ message: 'Lỗi server khi lấy báo cáo tiền lương cá nhân.', error: error.message });
+  }
+};

@@ -91,6 +91,90 @@ export const createTeacher = async (req: Request, res: Response) => {
   }
 };
 
+// NEW: Lấy hồ sơ của chính giảng viên đăng nhập
+export const getMyProfile = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as any;
+    const userId: string | undefined = authReq.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const teacher = await prisma.teacher.findFirst({
+      where: { userId },
+      include: {
+        degree: true,
+        department: true,
+        user: {
+          select: { id: true, email: true, role: true },
+        },
+      },
+    });
+
+    if (!teacher) {
+      return res.status(404).json({ message: 'Teacher profile not found' });
+    }
+    res.json(teacher);
+  } catch (error) {
+    console.error('Error fetching my profile:', error);
+    res.status(500).json({ message: 'Error fetching my profile', error: (error as Error).message });
+  }
+};
+
+// NEW: Cập nhật hồ sơ cá nhân (chỉ một số trường cho phép)
+export const updateMyProfile = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as any;
+    const userId: string | undefined = authReq.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const { firstName, lastName, gender, office, phone, birthDate } = req.body as Partial<UpdateTeacherInput>;
+
+    let safeBirthDate: Date | undefined = undefined;
+    if (birthDate) {
+      try {
+        const d = new Date(birthDate as any);
+        if (!isNaN(d.getTime())) {
+          safeBirthDate = d;
+        } else {
+          return res.status(400).json({ message: 'Ngày sinh không hợp lệ.' });
+        }
+      } catch {
+        return res.status(400).json({ message: 'Ngày sinh không hợp lệ.' });
+      }
+    }
+
+    const existing = await prisma.teacher.findFirst({ where: { userId } });
+    if (!existing) {
+      return res.status(404).json({ message: 'Teacher profile not found' });
+    }
+
+    const updated = await prisma.teacher.update({
+      where: { id: existing.id },
+      data: {
+        firstName,
+        lastName,
+        gender,
+        office,
+        phone,
+        birthDate: safeBirthDate,
+      },
+      include: {
+        degree: true,
+        department: true,
+        user: { select: { id: true, email: true, role: true } },
+      },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating my profile:', error);
+    res.status(400).json({ message: 'Lỗi khi cập nhật hồ sơ cá nhân', error: (error as Error).message });
+  }
+};
+
 export const getTeachers = async (req: Request, res: Response) => {
   try {
     const { search, sortBy, sortOrder, departmentId, degreeId } = req.query;
@@ -575,5 +659,46 @@ export const getTeacherStatistics = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error fetching teacher statistics:', error.message);
     res.status(500).json({ message: 'Lỗi khi tải dữ liệu thống kê giảng viên.', error: error.message });
+  }
+};
+
+// NEW: Danh sách giảng viên cùng khoa với tôi
+export const getMyDepartmentMembers = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as any;
+    const userId: string | undefined = authReq.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const me = await prisma.teacher.findFirst({ where: { userId } });
+    if (!me) {
+      return res.status(404).json({ message: 'Teacher profile not found' });
+    }
+
+    const { search } = req.query as { search?: string };
+    const where: any = { departmentId: me.departmentId };
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const members = await prisma.teacher.findMany({
+      where,
+      include: {
+        degree: true,
+        department: true,
+        user: { select: { id: true, email: true, role: true } },
+      },
+      orderBy: { lastName: 'asc' },
+    });
+
+    res.json(members);
+  } catch (error) {
+    console.error('Error fetching my department members:', error);
+    res.status(500).json({ message: 'Error fetching my department members', error: (error as Error).message });
   }
 };

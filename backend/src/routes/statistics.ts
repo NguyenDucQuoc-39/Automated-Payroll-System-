@@ -3,8 +3,10 @@ import { PrismaClient } from '@prisma/client';
 import {
   getTeacherSalaryByYear,
   getTeacherSalaryByDepartment,
-  getTeacherSalaryBySchool
+  getTeacherSalaryBySchool,
+  getPersonalTeacherSalary
 } from '../controllers/statistics.controller';
+import { authMiddleware } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -128,5 +130,8 @@ router.get('/teacher-year', getTeacherSalaryByYear);
 router.get('/teacher-department', getTeacherSalaryByDepartment);
 // Báo cáo: Tiền dạy của giảng viên toàn trường
 router.get('/teacher-school', getTeacherSalaryBySchool);
+
+// NEW: Báo cáo tiền lương cá nhân của giảng viên đang đăng nhập
+router.get('/teacher-salary/personal', authMiddleware, getPersonalTeacherSalary);
 
 export default router; 

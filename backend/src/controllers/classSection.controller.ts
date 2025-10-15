@@ -198,6 +198,73 @@ export const getAllClassSections = async (req: Request, res: Response) => {
   }
 };
 
+// NEW: Lấy danh sách lớp học phần của chính giảng viên đăng nhập
+export const getMyClassSections = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as any;
+    const userId: string | undefined = authReq.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const me = await prisma.teacher.findFirst({ where: { userId }, select: { id: true } });
+    if (!me) {
+      return res.status(404).json({ message: 'Teacher profile not found' });
+    }
+
+    const { page = 1, limit = 10, search = '', semesterId, academicYear, status } = req.query as any;
+    const pageNumber = parseInt(page as string);
+    const limitNumber = parseInt(limit as string);
+    const skip = (pageNumber - 1) * limitNumber;
+
+    const where: Prisma.ClassSectionWhereInput = {
+      assignedTeacherId: me.id,
+      OR: [
+        { code: { contains: search as string, mode: 'insensitive' } },
+        { name: { contains: search as string, mode: 'insensitive' } },
+      ],
+    };
+
+    if (semesterId) {
+      where.semesterId = semesterId as string;
+    }
+    if (status) {
+      where.status = status as string;
+    }
+    if (academicYear) {
+      where.semester = { academicYear: academicYear as string } as any;
+    }
+
+    const classSections = await prisma.classSection.findMany({
+      where,
+      skip,
+      take: limitNumber,
+      include: {
+        semester: { select: { id: true, name: true, academicYear: true, orderNumber: true } },
+        course: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            departmentId: true,
+            totalHours: true,
+            department: { select: { id: true, fullName: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const total = await prisma.classSection.count({ where });
+    const totalPages = Math.ceil(total / limitNumber);
+
+    res.status(200).json({ classSections, total, page: pageNumber, limit: limitNumber, totalPages });
+  } catch (error: any) {
+    console.error('Error fetching my class sections:', error);
+    res.status(500).json({ message: 'Lỗi server khi lấy lớp học phần của tôi.', error: error.message });
+  }
+};
+
 // Lấy lớp học phần theo ID
 export const getClassSectionById = async (req: Request, res: Response) => {
   try {

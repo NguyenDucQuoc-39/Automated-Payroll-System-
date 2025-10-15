@@ -1,26 +1,49 @@
 import React, { useEffect, useState } from 'react';
 import { getTeacherSalaryByYear } from '../../services/api';
-import { Select, Button, Table, Typography, message } from 'antd';
 import api from '../../services/api';
 
-const { Title } = Typography;
+// --- Material-UI Imports ---
+import {
+  Box,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TableFooter,
+  CircularProgress,
+  Alert,
+  Snackbar,
+  SelectChangeEvent
+} from '@mui/material';
+import { LoadingButton } from '@mui/lab';
 
 const TeacherYearReportPage: React.FC = () => {
   const [years, setYears] = useState<string[]>([]);
-  const [selectedYear, setSelectedYear] = useState<string | undefined>();
+  const [selectedYear, setSelectedYear] = useState<string>(''); // Dùng chuỗi rỗng để Select hoạt động tốt hơn
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
   const [total, setTotal] = useState<number>(0);
+
+  // State cho Snackbar (thay thế message của antd)
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'warning' } | null>(null);
 
   // Lấy danh sách năm học từ backend
   useEffect(() => {
     const fetchYears = async () => {
       try {
-        const res = await api.get('/semesters');
-        const years = Array.from(new Set(res.data.map((s: any) => s.academicYear))) as string[];
-        setYears(years);
+        const res = await api.get('/semesters/academic-years');
+        const ys = Array.isArray(res.data) ? res.data : [];
+        setYears(ys.sort((a: string, b: string) => b.localeCompare(a)));
       } catch {
-        message.error('Không lấy được danh sách năm học');
+        setSnackbar({ open: true, message: 'Không lấy được danh sách năm học', severity: 'error' });
       }
     };
     fetchYears();
@@ -28,58 +51,109 @@ const TeacherYearReportPage: React.FC = () => {
 
   const handleReport = async () => {
     if (!selectedYear) {
-      message.warning('Vui lòng chọn năm học');
+      setSnackbar({ open: true, message: 'Vui lòng chọn năm học', severity: 'warning' });
       return;
     }
     setLoading(true);
     try {
       const res = await getTeacherSalaryByYear(selectedYear);
-      setData(res.data.teachers);
-      setTotal(res.data.total);
+      const teachers = Array.isArray(res.data?.teachers) ? res.data.teachers : [];
+      setData(teachers);
+      setTotal(Number(res.data?.total || 0));
     } catch {
-      message.error('Không lấy được dữ liệu báo cáo');
+      setSnackbar({ open: true, message: 'Không lấy được dữ liệu báo cáo', severity: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  const columns = [
-    { title: 'Mã GV', dataIndex: 'code', key: 'code' },
-    { title: 'Tên Giảng viên', dataIndex: 'name', key: 'name' },
-    { title: 'Email', dataIndex: 'email', key: 'email' },
-    { title: 'Khoa', dataIndex: 'department', key: 'department' },
-    { title: 'Tổng Tiền Dạy', dataIndex: 'totalSalary', key: 'totalSalary', render: (v: number) => v.toLocaleString() + ' VNĐ' },
-  ];
+  const handleCloseSnackbar = () => {
+    if (snackbar) {
+      setSnackbar({ ...snackbar, open: false });
+    }
+  };
+  
+  const handleYearChange = (event: SelectChangeEvent<string>) => {
+    setSelectedYear(event.target.value);
+  };
+
 
   return (
-    <div style={{ padding: 24 }}>
-      <Title level={3}>Báo cáo tiền dạy của giảng viên trong một năm</Title>
-      <div style={{ marginBottom: 16, display: 'flex', gap: 16 }}>
-        <Select
-          style={{ width: 200 }}
-          placeholder="Chọn năm học"
-          value={selectedYear}
-          onChange={setSelectedYear}
+    <Paper sx={{ p: 3, m: 2 }}>
+      <Typography variant="h4" gutterBottom>
+        Báo Cáo Năm
+      </Typography>
+      
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
+        <FormControl sx={{ minWidth: 250 }}>
+          <InputLabel id="year-select-label">Năm học</InputLabel>
+          <Select
+            labelId="year-select-label"
+            value={selectedYear}
+            label="Năm học"
+            onChange={handleYearChange}
+          >
+            {years.map(y => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <LoadingButton
+          variant="contained"
+          onClick={handleReport}
+          loading={loading}
+          loadingIndicator={<CircularProgress color="inherit" size={24} />}
         >
-          {years.map(y => <Select.Option key={y} value={y}>{y}</Select.Option>)}
-        </Select>
-        <Button type="primary" onClick={handleReport} loading={loading}>Xem báo cáo</Button>
-      </div>
-      <Table
-        columns={columns}
-        dataSource={data}
-        rowKey="teacherId"
-        loading={loading}
-        pagination={false}
-        summary={() => (
-          <Table.Summary.Row>
-            <Table.Summary.Cell index={0} colSpan={4}><b>Tổng cộng</b></Table.Summary.Cell>
-            <Table.Summary.Cell index={4}><b>{total.toLocaleString()} VNĐ</b></Table.Summary.Cell>
-          </Table.Summary.Row>
-        )}
-      />
-    </div>
+          Xem báo cáo
+        </LoadingButton>
+      </Box>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 'bold' }}>Mã GV</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Tên Giảng viên</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Khoa</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }} align="right">Tổng Tiền Dạy</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {data.map((row) => (
+              <TableRow key={row.teacherId}>
+                <TableCell>GV{row.code?.toString().padStart(4, '0')}</TableCell>
+                <TableCell>{row.name}</TableCell>
+                <TableCell>{row.email}</TableCell>
+                <TableCell>{row.department}</TableCell>
+                <TableCell align="right">{row.totalSalary.toLocaleString()} VNĐ</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={4} sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
+                Tổng cộng
+              </TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
+                {total.toLocaleString()} VNĐ
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </TableContainer>
+
+      {snackbar && (
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      )}
+    </Paper>
   );
 };
 
-export default TeacherYearReportPage; 
+export default TeacherYearReportPage;

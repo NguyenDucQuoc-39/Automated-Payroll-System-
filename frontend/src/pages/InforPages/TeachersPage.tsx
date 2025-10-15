@@ -379,7 +379,7 @@ const Teachers: React.FC = () => {
 
         {isAdmin && (
           <>
-            {/* <Button
+            <Button
               variant="contained"
               startIcon={<UploadIcon />}
               component="label"
@@ -393,7 +393,7 @@ const Teachers: React.FC = () => {
                 accept=".xlsx,.xls"
                 onChange={handleFileUpload}
               />
-            </Button> */}
+            </Button>
             <Button
               variant="contained"
               startIcon={<AddIcon />}

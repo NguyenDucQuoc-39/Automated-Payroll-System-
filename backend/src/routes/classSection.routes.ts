@@ -7,6 +7,7 @@ import {
   deleteClassSection,
   batchCreateClassSections, // Import the new batch creation function
   getClassSectionStatistics,
+  getMyClassSections,
 } from '../controllers/classSection.controller';
 import { authMiddleware, adminMiddleware } from '../middleware/auth'; // Giả sử bạn có middleware này
 
@@ -25,6 +26,9 @@ router.post('/batch', adminMiddleware, batchCreateClassSections);
 
 // Lấy tất cả lớp học phần (có lọc và phân trang)
 router.get('/', getAllClassSections);
+
+// NEW: Lấy lớp học phần của giảng viên hiện tại
+router.get('/me', getMyClassSections);
 
 // Lấy lớp học phần theo ID
 router.get('/:id', getClassSectionById);

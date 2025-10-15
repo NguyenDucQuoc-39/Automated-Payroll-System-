@@ -28,7 +28,7 @@ const Login: React.FC = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: 'STAFF',
+    role: 'TEACHER',
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -146,7 +146,7 @@ const Login: React.FC = () => {
                 <MenuItem value="ADMIN">Quản trị viên</MenuItem>
                 <MenuItem value="DEPARTMENT_HEAD">Trưởng khoa</MenuItem>
                 <MenuItem value="ACCOUNTANT">Kế toán</MenuItem>
-                <MenuItem value="STAFF">Giảng viên</MenuItem>
+                <MenuItem value="TEACHER">Giảng viên</MenuItem>
               </Select>
             </FormControl>
             <Button

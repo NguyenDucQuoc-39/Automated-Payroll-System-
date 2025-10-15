@@ -8,7 +8,10 @@ import {
   getTeachersByDepartment,
   getTeachersNotHead,
   getTeacherStatistics,
-  importFromExcel
+  importFromExcel,
+  getMyProfile,
+  updateMyProfile,
+  getMyDepartmentMembers
 } from '../controllers/teacher.controller';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { Role } from '@prisma/client';
@@ -22,6 +25,11 @@ router.use(authMiddleware);
 
 // Get all teachers (accessible by all roles)
 router.get('/', getTeachers);
+
+// Self profile routes
+router.get('/me', getMyProfile);
+router.put('/me', updateMyProfile);
+router.get('/me/department-members', getMyDepartmentMembers);
 
 // Get teachers by department (accessible by all roles)
 router.get('/department/:departmentId', getTeachersByDepartment);

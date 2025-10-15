@@ -21,6 +21,10 @@ import TinhTienDayPage from './pages/SettingPages/TinhTienDayPage';
 import TeacherYearReportPage from './pages/ReportPages/TeacherYearReportPage';
 import TeacherDepartmentReportPage from './pages/ReportPages/TeacherDepartmentReportPage';
 import TeacherSchoolReportPage from './pages/ReportPages/TeacherSchoolReportPage';
+import ProfilePage from './pages/TeacherPages/ProfilePage';
+import MyDepartmentPage from './pages/TeacherPages/MyDepartmentPage';
+import MyClassesPage from './pages/TeacherPages/MyClassesPage';
+import MySalaryPage from './pages/TeacherPages/MySalaryPage';
 
 
 const App: React.FC = () => {
@@ -58,6 +62,10 @@ const App: React.FC = () => {
         <Route path="report/teacher-year" element={<TeacherYearReportPage />} />
         <Route path="report/teacher-department" element={<TeacherDepartmentReportPage />} />
         <Route path="report/teacher-school" element={<TeacherSchoolReportPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="my-department" element={<MyDepartmentPage />} />
+        <Route path="my-classes" element={<MyClassesPage />} />
+        <Route path="my-salary" element={<MySalaryPage />} />
       </Route>
     </Routes>
   );

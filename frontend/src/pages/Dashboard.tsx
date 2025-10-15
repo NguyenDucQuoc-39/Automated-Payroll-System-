@@ -51,7 +51,7 @@ const Dashboard: React.FC = () => {
       {/* Hero Section */}
       <HeroSection>
         <Typography variant="h2" component="h1" fontWeight="bold" gutterBottom>
-          Hệ thống Thanh toán Lương Giảng viên
+          Hệ thống Quản lý và Thanh toán Lương Giảng viên
         </Typography>
         <Typography variant="h6" sx={{ maxWidth: '800px', mx: 'auto', mb: 4 }}>
           Giải pháp quản lý toàn diện và hiệu quả: từ thông tin giảng viên, khoa, bằng cấp đến quy trình tính lương minh bạch – nhanh chóng và chính xác.

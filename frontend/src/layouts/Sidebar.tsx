@@ -1,48 +1,28 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation, Outlet } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useNavigate, Outlet } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   AppBar,
   Box,
   CssBaseline,
   Toolbar,
-  Typography,
   IconButton,
   Menu,
   MenuItem,
-  Button, // Thêm Button
-  ListItemIcon,
-  ListItemText,
+  Button,
 } from '@mui/material';
-import {
-  Dashboard as DashboardIcon,
-  School as SchoolIcon,
-  BarChart as BarChartIcon,
-  AccountCircle as AccountCircleIcon,
-  Info as InfoIcon,
-  Business as BusinessIcon,
-  MenuBook as MenuBookIcon,
-  CalendarToday as CalendarTodayIcon,
-  Book as BookIcon,
-  Assessment as AssessmentIcon,
-  Settings as SettingsIcon,
-  MonetizationOn as MoneyIcon,
-  Class as ClassIcon,
-  CardMembership as CardMembershipIcon,
-  Groups as GroupsIcon,
-  HourglassEmpty as HourglassEmptyIcon,
-  Stars as StarsIcon,
-} from '@mui/icons-material';
+import { AccountCircle as AccountCircleIcon } from '@mui/icons-material';
 import { logout } from '../store/slices/authSlice';
-import { AppDispatch } from '../store';
+import { AppDispatch, RootState } from '../store';
 import logo from '../assets/logo.png'; // Đảm bảo đường dẫn này đúng
 
 const deepBlueBlack = '#1A202C';
 
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
+  const userRole = useSelector((state: RootState) => state.auth.user?.role);
+  const isTeacher = userRole === 'TEACHER';
 
   // State cho menu người dùng (góc phải)
   const [userAnchorEl, setUserAnchorEl] = useState<null | HTMLElement>(null);
@@ -93,127 +73,139 @@ const MainLayout: React.FC = () => {
 
   // --- Định nghĩa các mục menu ---
   const infoMenuItems = [
-    { text: 'Bằng Cấp', icon: <CardMembershipIcon />, path: '/degrees' },
-    { text: 'Khoa', icon: <BusinessIcon />, path: '/departments' },
-    { text: 'Giảng Viên', icon: <GroupsIcon />, path: '/teachers' },
-    { text: 'Thống Kê Giảng Viên', icon: <BarChartIcon />, path: '/statistics' },
+    { text: 'Bằng Cấp', path: '/degrees' },
+    { text: 'Khoa', path: '/departments' },
+    { text: 'Giảng Viên', path: '/teachers' },
+    { text: 'Thống Kê Giảng Viên', path: '/statistics' },
   ];
 
   const courseMenuItems = [
-    { text: 'Học Kỳ', icon: <CalendarTodayIcon />, path: '/semesters' },
-    { text: 'Học Phần', icon: <MenuBookIcon />, path: '/courses' },
-    { text: 'Lớp Học Phần & Phân Công', icon: <ClassIcon />, path: '/class-sections' },
-    { text: 'Thống Kê Số Lớp', icon: <AssessmentIcon />, path: '/class-section-statistics' },
+    { text: 'Học Kỳ', path: '/semesters' },
+    { text: 'Học Phần', path: '/courses' },
+    { text: 'Lớp Học Phần & Phân Công', path: '/class-sections' },
+    { text: 'Thống Kê Số Lớp', path: '/class-section-statistics' },
   ];
   
   const salaryMenuItems = [
-      { text: 'Thiết Lập Hệ Số Tiết Học', icon: <HourglassEmptyIcon />, path: '/tiet-he-so' },
-      { text: 'Thiết Lập Hệ Số Bằng Cấp', icon: <StarsIcon />, path: '/bang-cap-he-so' },
-      { text: 'Thiết Lập Hệ Số Lớp', icon: <SchoolIcon />, path: '/lop-he-so' },
-      { text: 'Tính Tiền Dạy', icon: <MoneyIcon />, path: '/tinh-tien-day' },
+    { text: 'Thiết Lập Hệ Số Tiết Học', path: '/tiet-he-so' },
+    { text: 'Thiết Lập Hệ Số Bằng Cấp', path: '/bang-cap-he-so' },
+    { text: 'Thiết Lập Hệ Số Lớp', path: '/lop-he-so' },
+    { text: 'Tính Tiền Dạy', path: '/tinh-tien-day' },
   ];
 
   const reportMenuItems = [
-    { text: 'Tiền dạy của giảng viên trong một năm', icon: <MoneyIcon />, path: '/report/teacher-year' },
-    { text: 'Tiền dạy của giảng viên một khoa', icon: <MoneyIcon />, path: '/report/teacher-department' },
-    { text: 'Tiền dạy của giảng viên toàn trường', icon: <MoneyIcon />, path: '/report/teacher-school' },
+    { text: 'Báo Cáo Năm', path: '/report/teacher-year' },
+    { text: 'Báo Cáo Khoa', path: '/report/teacher-department' },
+    { text: 'Báo Cáo Toàn Trường', path: '/report/teacher-school' },
   ];
   
-  // --- Hàm render menu item để tái sử dụng ---
-  const renderMenuItems = (items: { text: string; icon: JSX.Element; path: string }[]) => {
+  // --- Hàm render menu item (đã thêm sx prop) ---
+  const renderMenuItems = (items: { text: string; path: string }[]) => {
     return items.map((item) => (
-      <MenuItem key={item.text} onClick={() => handleNavigate(item.path)}>
-        <ListItemIcon>{item.icon}</ListItemIcon>
-        <ListItemText>{item.text}</ListItemText>
+      <MenuItem 
+        key={item.text} 
+        onClick={() => handleNavigate(item.path)}
+        sx={{ fontSize: '1rem' }} // Chỉnh cỡ chữ
+      >
+        {item.text}
       </MenuItem>
     ));
   };
 
+  // Kiểu dáng chung cho các nút trên AppBar
+  const buttonStyles = {
+    fontSize: '1rem', // Cỡ chữ 16px
+    textTransform: 'none', // Ngăn việc tự động viết hoa
+    mx: 1, // Thêm khoảng cách ngang giữa các nút
+  };
 
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
       <AppBar position="fixed" sx={{ backgroundColor: deepBlueBlack }}>
         <Toolbar>
-          {/* Logo */}
-          <Box
-            component="img"
-            src={logo}
-            alt="Phenikaa Logo"
-            sx={{ height: 40, mr: 2, cursor: 'pointer' }}
-            onClick={() => navigate('/dashboard')}
-          />
-          
-          {/* Tiêu đề hệ thống */}
-          <Typography variant="h6" noWrap component="div" sx={{ display: { xs: 'none', sm: 'block' } }}>
-            Hệ thống Quản lý Giảng viên
-          </Typography>
+          {/* PHẦN BÊN TRÁI */}
+          <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
+            <Box
+              component="img"
+              src={logo}
+              alt="Phenikaa Logo"
+              sx={{ height: 40, cursor: 'pointer' }}
+              onClick={() => navigate('/dashboard')}
+            />
+          </Box>
 
-          {/* Spacer - Đẩy các mục menu sang phải */}
-          <Box sx={{ flexGrow: 1 }} />
-
-          {/* Các nút điều hướng */}
-          <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
-            <Button color="inherit" onClick={() => navigate('/dashboard')}>
-              <DashboardIcon sx={{mr: 1}}/>
+          {/* PHẦN Ở GIỮA - CÁC NÚT ĐIỀU HƯỚNG */}
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'center' }}>
+            <Button color="inherit" onClick={() => navigate('/dashboard')} sx={buttonStyles}>
               Trang chủ
             </Button>
 
-            {/* Menu Quản lý thông tin */}
-            <Button color="inherit" onClick={(e) => handleMenuOpen(e, setInfoMenuAnchorEl)}>
-              <InfoIcon sx={{mr: 1}}/>
-              Quản lý thông tin
-            </Button>
-            <Menu
-              anchorEl={infoMenuAnchorEl}
-              open={Boolean(infoMenuAnchorEl)}
-              onClose={() => handleMenuClose(setInfoMenuAnchorEl)}
-            >
-              {renderMenuItems(infoMenuItems)}
-            </Menu>
+            {!isTeacher && (
+              <>
+                <Button color="inherit" onClick={(e) => handleMenuOpen(e, setInfoMenuAnchorEl)} sx={buttonStyles}>
+                  Quản lý thông tin
+                </Button>
+                <Menu
+                  anchorEl={infoMenuAnchorEl}
+                  open={Boolean(infoMenuAnchorEl)}
+                  onClose={() => handleMenuClose(setInfoMenuAnchorEl)}
+                >
+                  {renderMenuItems(infoMenuItems)}
+                </Menu>
 
-            {/* Menu Quản lý học phần */}
-            <Button color="inherit" onClick={(e) => handleMenuOpen(e, setCourseMenuAnchorEl)}>
-                <MenuBookIcon sx={{mr: 1}}/>
-                Quản lý học phần
-            </Button>
-            <Menu
-              anchorEl={courseMenuAnchorEl}
-              open={Boolean(courseMenuAnchorEl)}
-              onClose={() => handleMenuClose(setCourseMenuAnchorEl)}
-            >
-              {renderMenuItems(courseMenuItems)}
-            </Menu>
-            
-            {/* Menu Thiết lập & tính tiền */}
-            <Button color="inherit" onClick={(e) => handleMenuOpen(e, setSalaryMenuAnchorEl)}>
-                <SettingsIcon sx={{mr: 1}}/>
-                Thiết lập & Tính tiền
-            </Button>
-            <Menu
-              anchorEl={salaryMenuAnchorEl}
-              open={Boolean(salaryMenuAnchorEl)}
-              onClose={() => handleMenuClose(setSalaryMenuAnchorEl)}
-            >
-              {renderMenuItems(salaryMenuItems)}
-            </Menu>
+                <Button color="inherit" onClick={(e) => handleMenuOpen(e, setCourseMenuAnchorEl)} sx={buttonStyles}>
+                  Quản lý học phần
+                </Button>
+                <Menu
+                  anchorEl={courseMenuAnchorEl}
+                  open={Boolean(courseMenuAnchorEl)}
+                  onClose={() => handleMenuClose(setCourseMenuAnchorEl)}
+                >
+                  {renderMenuItems(courseMenuItems)}
+                </Menu>
+                
+                <Button color="inherit" onClick={(e) => handleMenuOpen(e, setSalaryMenuAnchorEl)} sx={buttonStyles}>
+                  Thiết lập & Tính tiền
+                </Button>
+                <Menu
+                  anchorEl={salaryMenuAnchorEl}
+                  open={Boolean(salaryMenuAnchorEl)}
+                  onClose={() => handleMenuClose(setSalaryMenuAnchorEl)}
+                >
+                  {renderMenuItems(salaryMenuItems)}
+                </Menu>
 
-             {/* Menu Báo cáo */}
-            <Button color="inherit" onClick={(e) => handleMenuOpen(e, setReportMenuAnchorEl)}>
-                <AssessmentIcon sx={{mr: 1}}/>
-                Báo cáo
-            </Button>
-            <Menu
-              anchorEl={reportMenuAnchorEl}
-              open={Boolean(reportMenuAnchorEl)}
-              onClose={() => handleMenuClose(setReportMenuAnchorEl)}
-            >
-              {renderMenuItems(reportMenuItems)}
-            </Menu>
+                <Button color="inherit" onClick={(e) => handleMenuOpen(e, setReportMenuAnchorEl)} sx={buttonStyles}>
+                  Báo cáo
+                </Button>
+                <Menu
+                  anchorEl={reportMenuAnchorEl}
+                  open={Boolean(reportMenuAnchorEl)}
+                  onClose={() => handleMenuClose(setReportMenuAnchorEl)}
+                >
+                  {renderMenuItems(reportMenuItems)}
+                </Menu>
+              </>
+            )}
+
+            {isTeacher && (
+              <>
+                <Button color="inherit" onClick={() => navigate('/my-department')} sx={buttonStyles}>
+                  Khoa của tôi
+                </Button>
+                <Button color="inherit" onClick={() => navigate('/my-classes')} sx={buttonStyles}>
+                  Lớp của tôi
+                </Button>
+                <Button color="inherit" onClick={() => navigate('/my-salary')} sx={buttonStyles}>
+                  Lương của tôi
+                </Button>
+              </>
+            )}
           </Box>
 
-          {/* Menu người dùng */}
-          <div>
+          {/* PHẦN BÊN PHẢI */}
+          <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
             <IconButton
               size="large"
               aria-label="account of current user"
@@ -233,10 +225,20 @@ const MainLayout: React.FC = () => {
               open={Boolean(userAnchorEl)}
               onClose={handleUserMenuClose}
             >
-              <MenuItem onClick={() => { handleNavigate('/profile'); handleUserMenuClose(); }}>Hồ sơ</MenuItem>
-              <MenuItem onClick={handleLogout}>Đăng xuất</MenuItem>
+              <MenuItem 
+                onClick={() => { handleNavigate('/profile'); handleUserMenuClose(); }}
+                sx={{ fontSize: '1rem' }} // Chỉnh cỡ chữ
+              >
+                Hồ sơ
+              </MenuItem>
+              <MenuItem 
+                onClick={handleLogout}
+                sx={{ fontSize: '1rem' }} // Chỉnh cỡ chữ
+              >
+                Đăng xuất
+              </MenuItem>
             </Menu>
-          </div>
+          </Box>
         </Toolbar>
       </AppBar>
       
@@ -246,8 +248,8 @@ const MainLayout: React.FC = () => {
         sx={{
           flexGrow: 1,
           p: 3,
-          width: '100%', // Chiếm toàn bộ chiều rộng
-          mt: 8, // Khoảng cách từ đầu trang (bằng chiều cao AppBar)
+          width: '100%',
+          mt: 8,
         }}
       >
         <Outlet />
