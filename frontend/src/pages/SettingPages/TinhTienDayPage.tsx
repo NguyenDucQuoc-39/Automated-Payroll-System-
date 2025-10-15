@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Select, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress, Box, Typography, Snackbar, Alert } from '@mui/material';
 import { getAllDepartments } from '../../services/department.service';
-import { getAcademicYears, getSemesters } from '../../services/semester.service';
+import { getSemesters } from '../../services/semester.service';
 import { getTeachersByDepartment } from '../../services/teacher.service';
 import { getClassSections } from '../../services/classSection.service';
 import { getLessonCoefficients } from '../../services/lessonCoefficient.service';
@@ -23,6 +23,12 @@ const TinhTienDayPage = () => {
   const [classCoefficients, setClassCoefficients] = useState<any[]>([]);
   const [semesters, setSemesters] = useState<any[]>([]);
   const [selectedSemester, setSelectedSemester] = useState('');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'info' | 'warning' });
+
+  const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning' = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+  const handleCloseSnackbar = () => setSnackbar(prev => ({ ...prev, open: false }));
 
   useEffect(() => {
     getAllDepartments().then(res => setDepartments(res.data));
@@ -32,29 +38,36 @@ const TinhTienDayPage = () => {
   const handleSearch = async () => {
     setLoading(true);
     setTeachers([]);
-    if (selectedDepartment) {
-      const res = await getTeachersByDepartment(selectedDepartment);
-      setTeachers(res.data);
+    try {
+      if (selectedDepartment) {
+        const res = await getTeachersByDepartment(selectedDepartment);
+        setTeachers(res.data);
+      }
+    } catch {
+      showNotification('Không lấy được danh sách giảng viên', 'error');
     }
     setLoading(false);
   };
-  
 
   const handleOpenDetail = async (teacher: any) => {
     setSelectedTeacher(teacher);
     setOpenDetail(true);
-    const [lessonRes, degreeRes, classRes] = await Promise.all([
-      getLessonCoefficients(),
-      getDegreeCoefficients(),
-      getClassCoefficients()
-    ]);
-    const semesterObj = semesters.find((s: any) => s.id === selectedSemester);
-    setLessonCoefficient(lessonRes.data.find((x: any) => x.academicYear === semesterObj?.academicYear && x.status === 'ACTIVE'));
-    setDegreeCoefficient(degreeRes.data.find((x: any) => x.academicYear === semesterObj?.academicYear && x.status === 'ACTIVE'));
-    setClassCoefficients(classRes.data.filter((x: any) => x.academicYear === semesterObj?.academicYear && x.status === 'ACTIVE'));
-    // Lấy danh sách lớp học phần đã dạy
-    const classSectionRes = await getClassSections({ teacherId: teacher.id, semesterId: selectedSemester });
-    setClassSections(classSectionRes.data.classSections.filter((cs: any) => cs.semester.id === selectedSemester && cs.course.department.id === selectedDepartment));
+    try {
+      const [lessonRes, degreeRes, classRes] = await Promise.all([
+        getLessonCoefficients(),
+        getDegreeCoefficients(),
+        getClassCoefficients()
+      ]);
+      const semesterObj = semesters.find((s: any) => s.id === selectedSemester);
+      setLessonCoefficient(lessonRes.data.find((x: any) => x.academicYear === semesterObj?.academicYear && x.status === 'ACTIVE'));
+      setDegreeCoefficient(degreeRes.data.find((x: any) => x.academicYear === semesterObj?.academicYear && x.status === 'ACTIVE'));
+      setClassCoefficients(classRes.data.filter((x: any) => x.academicYear === semesterObj?.academicYear && x.status === 'ACTIVE'));
+      // Lấy danh sách lớp học phần đã dạy
+      const classSectionRes = await getClassSections({ teacherId: teacher.id, semesterId: selectedSemester });
+      setClassSections(classSectionRes.data.classSections.filter((cs: any) => cs.semester.id === selectedSemester && cs.course.department.id === selectedDepartment));
+    } catch {
+      showNotification('Không lấy được chi tiết lớp học phần', 'error');
+    }
   };
 
   const handleCloseDetail = () => {
@@ -93,24 +106,33 @@ const TinhTienDayPage = () => {
   const totalSalary = classSections.reduce((sum, cs) => sum + calcClassSectionSalary(cs), 0);
 
   return (
-    <div>
-      <h2>Tính Tiền Dạy</h2>
-      <FormControl sx={{ minWidth: 250, mr: 2 }}>
-        <InputLabel>Học Kỳ</InputLabel>
-        <Select value={selectedSemester} label="Học Kỳ" onChange={e => setSelectedSemester(e.target.value)}>
-          {semesters.map((s: any) => (
-            <MenuItem key={s.id} value={s.id}>{s.academicYear} - {s.name}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <FormControl sx={{ minWidth: 200, mr: 2 }}>
-        <InputLabel>Khoa</InputLabel>
-        <Select value={selectedDepartment} label="Khoa" onChange={e => setSelectedDepartment(e.target.value)}>
-          {departments.map((d: any) => <MenuItem key={d.id} value={d.id}>{d.fullName}</MenuItem>)}
-        </Select>
-      </FormControl>
-      <Button variant="contained" sx={{ mt: 1}} onClick={handleSearch} disabled={!selectedSemester || !selectedDepartment}>Xem báo cáo</Button>
-      {loading ? <CircularProgress sx={{ mt: 2 }} /> : (
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom>
+        Tính Tiền Dạy
+      </Typography>
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        <FormControl sx={{ minWidth: 250, mr: 2 }} size="small">
+          <InputLabel>Học Kỳ</InputLabel>
+          <Select size='small' value={selectedSemester} label="Học Kỳ" onChange={e => setSelectedSemester(e.target.value)}>
+            {semesters.map((s: any) => (
+              <MenuItem key={s.id} value={s.id}>{s.academicYear} - {s.name}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <FormControl sx={{ minWidth: 200, mr: 2 }} size="small">
+          <InputLabel>Khoa</InputLabel>
+          <Select size='small' value={selectedDepartment} label="Khoa" onChange={e => setSelectedDepartment(e.target.value)}>
+            {departments.map((d: any) => <MenuItem key={d.id} value={d.id}>{d.fullName}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <Button 
+        variant="contained" 
+        sx={{ mt: 1, height: 40 }} 
+        onClick={handleSearch} disabled={!selectedSemester || !selectedDepartment}
+        color='primary'
+        >Xem báo cáo</Button>
+      </Box>
+      {loading ? <Box display="flex" justifyContent="center" p={3}><CircularProgress /></Box> : (
         <TableContainer component={Paper} sx={{ mt: 4 }}>
           <Table>
             <TableHead>
@@ -172,7 +194,7 @@ const TinhTienDayPage = () => {
                 ))}
                 <TableRow>
                   <TableCell colSpan={6} align="right"><b>Tổng tiền dạy</b></TableCell>
-                  <TableCell><b>{totalSalary.toLocaleString()} VNĐ</b></TableCell>
+                  <TableCell colSpan={2}><b>{totalSalary.toLocaleString()} VNĐ</b></TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -182,7 +204,17 @@ const TinhTienDayPage = () => {
           <Button onClick={handleCloseDetail}>Đóng</Button>
         </DialogActions>
       </Dialog>
-    </div>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 };
 

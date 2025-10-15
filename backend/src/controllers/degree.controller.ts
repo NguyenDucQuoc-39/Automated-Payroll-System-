@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma, DegreeTypeEnum } from '@prisma/client';
 import { CreateDegreeInput, UpdateDegreeInput } from '../types/typeBackend'; // Đảm bảo đường dẫn đúng
+import * as XLSX from 'xlsx';
+import fs from 'fs';
 
 const prisma = new PrismaClient();
 
@@ -19,12 +21,28 @@ export const createDegree = async (req: Request, res: Response) => {
   console.log('Backend: Đã nhận được yêu cầu tạo bằng cấp.');
   console.log('Backend: Dữ liệu nhận được:', req.body);
   try {
-    const data: CreateDegreeInput = req.body; // data.type is now "Thạc sĩ" from frontend
+    const data: CreateDegreeInput = req.body;
 
     // Map the Vietnamese string type to DegreeTypeEnum before saving to DB
     const typeEnum = mapStringToDegreeTypeEnum(data.type);
     if (!typeEnum) {
       return res.status(400).json({ message: `Loại bằng cấp "${data.type}" không hợp lệ.` });
+    }
+
+    // Kiểm tra trùng tên đầy đủ (fullName)
+    const existingFullName = await prisma.degree.findFirst({
+      where: {
+        fullName: { equals: data.fullName.trim(), mode: 'insensitive' }
+      }
+    });
+    if (existingFullName) {
+      return res.status(409).json({ message: `Tên đầy đủ bằng cấp '${data.fullName}' đã tồn tại.` });
+    }
+
+    // Kiểm tra shortName không chứa ký tự đặc biệt
+    const shortNameRegex = /^[A-Za-z0-9]+$/;
+    if (!shortNameRegex.test(data.shortName)) {
+      return res.status(400).json({ message: 'Tên viết tắt không được chứa ký tự đặc biệt, dấu cách hoặc dấu.' });
     }
 
     // Tìm số thứ tự lớn nhất hiện có và tăng lên 1
@@ -41,8 +59,8 @@ export const createDegree = async (req: Request, res: Response) => {
 
     const degree = await prisma.degree.create({
       data: {
-        orderNumber: newOrderNumber, // Gán orderNumber tự động
-        type: typeEnum, // Lưu giá trị enum
+        orderNumber: newOrderNumber,
+        type: typeEnum,
         fullName: data.fullName,
         shortName: data.shortName
       }
@@ -209,24 +227,37 @@ export const deleteDegree = async (req: Request, res: Response) => {
   }
 };
 
-// Hàm mới để import bằng cấp từ Excel/CSV
+// 
 export const importDegrees = async (req: Request, res: Response) => {
-  console.log('Backend: Đã nhận yêu cầu import bằng cấp.');
-  const degreesData: any[] = req.body.degrees; 
-  const errors: string[] = [];
-  let successCount = 0;
-
-  console.log(`Received ${degreesData?.length} records for import. (Checking after req.body.degrees)`);
-  console.log('Content of req.body:', JSON.stringify(req.body));
-
+  console.log('IMPORT START');
   try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Không nhận được file.' });
+    }
+
+    // Đọc file Excel
+    const workbook = XLSX.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const degreesDataRaw: any[] = XLSX.utils.sheet_to_json(sheet);
+
+     // Map lại key cho từng dòng
+     const degreesData = degreesDataRaw.map(row => ({
+      type: row['Loại bằng cấp'],
+      shortName: row['Tên viết tắt'],
+      fullName: row['Tên đầy đủ'],
+    }));
+
+    // Xóa file sau khi đọc xong
+    fs.unlinkSync(req.file.path);
+
+    const errors: string[] = [];
+    let successCount = 0;
     let currentOrderNumber = (await prisma.degree.findFirst({ orderBy: { orderNumber: 'desc' } }))?.orderNumber || 0;
-    console.log('Initial currentOrderNumber:', currentOrderNumber);
 
     if (!degreesData || !Array.isArray(degreesData) || degreesData.length === 0) {
       const msg = "Dữ liệu nhập không hợp lệ hoặc thiếu.";
       errors.push(msg);
-      console.error('Validation error (not array or empty):', msg);
       return res.status(400).json({
         message: 'Dữ liệu nhập không hợp lệ.',
         successCount: 0,
@@ -234,28 +265,26 @@ export const importDegrees = async (req: Request, res: Response) => {
         errors: [msg],
       });
     }
+    console.log('degreesData:', degreesData);
 
     for (let i = 0; i < degreesData.length; i++) {
       const row = degreesData[i];
-      const rowNum = (row.row !== undefined && row.row !== null) ? row.row : (i + 2);
-      
-      console.log(`Processing data for row (original Excel row: ${rowNum}):`, row);
+      const rowNum = i + 2; // Excel row (header là 1)
+      console.log('Row:', row);
 
       try {
         // 1. Basic validation
         if (!row.fullName || !row.type || !row.shortName) {
           const errMsg = `Dòng ${rowNum}: Thiếu thông tin bắt buộc (Tên đầy đủ, Loại bằng cấp, Tên viết tắt).`;
           errors.push(errMsg);
-          console.warn(errMsg);
           continue;
         }
 
         // 2. Validate and map DegreeTypeEnum
         const typeEnum = mapStringToDegreeTypeEnum(row.type);
         if (!typeEnum) {
-          const errMsg = `Dòng ${rowNum}: Loại bằng cấp "${row.type}" không hợp lệ.`;
+          const errMsg = `Dòng ${rowNum}: Loại bằng cấp \"${row.type}\" không hợp lệ.`;
           errors.push(errMsg);
-          console.warn(errMsg);
           continue;
         }
 
@@ -269,13 +298,13 @@ export const importDegrees = async (req: Request, res: Response) => {
         if (existingDegree) {
           const errMsg = `Dòng ${rowNum}: Dữ liệu bằng cấp đã tồn tại. (Tên đầy đủ '${row.fullName}' đã tồn tại).`;
           errors.push(errMsg);
-          console.warn(errMsg);
           continue;
         }
-        
+
         currentOrderNumber++; // Tăng số thứ tự cho bản ghi mới
 
         // 4. Create the degree
+        console.log('Creating degree:', row.fullName, row.type, row.shortName);
         await prisma.degree.create({
           data: {
             orderNumber: currentOrderNumber,
@@ -285,26 +314,15 @@ export const importDegrees = async (req: Request, res: Response) => {
           },
         });
         successCount++;
-        console.log(`Dòng ${rowNum}: Tạo bằng cấp thành công: ${row.fullName}`);
-
       } catch (dbError: any) {
         let errMsg = `Dòng ${rowNum}: Lỗi khi xử lý bằng cấp.`;
         if (dbError instanceof Prisma.PrismaClientKnownRequestError) {
           errMsg = `Dòng ${rowNum}: Lỗi Prisma (mã ${dbError.code}). Chi tiết: ${dbError.message}.`;
-          console.error(`Prisma error (code ${dbError.code}) for row ${rowNum}:`, dbError.message);
-        } else {
-          console.error(`Full non-Prisma error object for row ${rowNum}:`, dbError);
         }
         errors.push(errMsg);
-        console.error(`Error message pushed for row ${rowNum}:`, errMsg);
       }
     }
-
-    console.log('--- Finished processing all degrees. ---');
-    console.log('Total successful imports:', successCount);
-    console.log('Total errors collected:', errors.length);
-    console.log('Collected errors array content (JSON):', JSON.stringify(errors));
-
+    console.log('IMPORT END');
     res.status(200).json({
       message: 'Quá trình import hoàn tất.',
       successCount,
@@ -313,17 +331,14 @@ export const importDegrees = async (req: Request, res: Response) => {
     });
 
   } catch (error: any) {
-    console.error('Lỗi chung khi import bằng cấp (Outer Catch - full error):', error);
     const errorMessage = error.message || 'Đã xảy ra lỗi server không xác định khi import dữ liệu.';
-    errors.push(`Lỗi chung khi xử lý file: ${errorMessage}. Kiểm tra console log backend.`);
     res.status(500).json({
       message: 'Đã xảy ra lỗi server khi import dữ liệu.',
       successCount: 0,
-      errorCount: errors.length,
-      errors,
+      errorCount: 1,
+      errors: [errorMessage],
     });
   }
-  console.log('--- END importDegrees backend function ---');
 };
 
 export const getAllDegrees = async (req: Request, res: Response) => {

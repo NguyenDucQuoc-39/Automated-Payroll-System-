@@ -19,21 +19,47 @@ interface TeacherRow {
   isHead: boolean;
   degreeType: 'MASTER' | 'DOCTOR' | 'ASSOCIATE_PROFESSOR' | 'PROFESSOR';
   departmentCode: string;
+  phone: string;
+  birthDate: string | Date;
 }
 
 export const createTeacher = async (req: Request, res: Response) => {
   try {
     const data: CreateTeacherInput = req.body;
 
+    // Kiểm tra bắt buộc phone và birthDate
+    if (!data.phone || !data.birthDate) {
+      return res.status(400).json({ message: 'Số điện thoại và ngày sinh là bắt buộc.' });
+    }
+
+    // Chuyển birthDate về kiểu Date
+    let safeBirthDate: Date;
+    try {
+      safeBirthDate = new Date(data.birthDate);
+      if (isNaN(safeBirthDate.getTime())) throw new Error();
+    } catch {
+      return res.status(400).json({ message: 'Ngày sinh không hợp lệ. Định dạng phải là YYYY-MM-DD hoặc ISO-8601.' });
+    }
+
     // Hash password
     const hashedPassword = await hashPassword(data.password);
+
+    // Chuyển role về đúng enum nếu là string
+    let userRole: Role = Role.TEACHER;
+    if (data.role && typeof data.role === 'string') {
+      if (Object.values(Role).includes(data.role as Role)) {
+        userRole = data.role as Role;
+      }
+    } else if (data.role) {
+      userRole = data.role;
+    }
 
     // Create user account
     const user = await prisma.user.create({
       data: {
         email: data.email,
         password: hashedPassword,
-        role: data.role || Role.TEACHER, // Use data.role if provided, otherwise default to TEACHER
+        role: userRole,
       },
     });
 
@@ -49,6 +75,8 @@ export const createTeacher = async (req: Request, res: Response) => {
         departmentId: data.departmentId,
         isHead: data.isHead || false,
         userId: user.id,
+        phone: data.phone,
+        birthDate: safeBirthDate,
       },
       include: {
         degree: true,
@@ -59,19 +87,17 @@ export const createTeacher = async (req: Request, res: Response) => {
     res.status(201).json(teacher);
   } catch (error) {
     console.error('Error creating teacher:', error);
-    // Add more specific error handling if needed
     res.status(400).json({ message: 'Error creating teacher', error: (error as Error).message });
   }
 };
 
 export const getTeachers = async (req: Request, res: Response) => {
   try {
-    const { search, sortBy, sortOrder } = req.query;
+    const { search, sortBy, sortOrder, departmentId, degreeId } = req.query;
 
     const where: any = {};
     if (search) {
       where.OR = [
-        
         { firstName: { contains: search as string, mode: 'insensitive' } },
         { lastName: { contains: search as string, mode: 'insensitive' } },
         { email: { contains: search as string, mode: 'insensitive' } },
@@ -81,6 +107,12 @@ export const getTeachers = async (req: Request, res: Response) => {
         { degree: { type: { contains: search as string, mode: 'insensitive' } } },
       ];
     }
+    if (departmentId && typeof departmentId === 'string') {
+      where.departmentId = departmentId;
+    }
+    if (degreeId && typeof degreeId === 'string') {
+      where.degreeId = degreeId;
+    }
 
     const orderBy: any = {};
     if (sortBy) {
@@ -89,13 +121,12 @@ export const getTeachers = async (req: Request, res: Response) => {
       } else if (sortBy === 'degree') {
         orderBy.degree = { fullName: sortOrder as 'asc' | 'desc' };
       } else if (sortBy === 'orderNumber') {
-        // Bỏ qua sắp xếp theo orderNumber vì chưa có trong database
         orderBy.lastName = 'asc';
       } else {
         orderBy[sortBy as string] = sortOrder || 'asc';
       }
     } else {
-      orderBy.lastName = 'asc'; // Default sort
+      orderBy.lastName = 'asc';
     }
 
     const teachers = await prisma.teacher.findMany({
@@ -150,11 +181,32 @@ export const getTeacherById = async (req: Request, res: Response) => {
 export const updateTeacher = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { firstName, lastName, gender, office, email, degreeId, departmentId, role, isHead } = req.body;
+    const { firstName, lastName, gender, office, email, degreeId, departmentId, role, isHead, phone, birthDate } = req.body;
 
     const teacherToUpdate = await prisma.teacher.findUnique({ where: { id } });
     if (!teacherToUpdate) {
       return res.status(404).json({ message: 'Teacher not found' });
+    }
+
+    // Chuyển role về đúng enum nếu là string
+    let updateRole: Role | undefined = undefined;
+    if (role && typeof role === 'string') {
+      if (Object.values(Role).includes(role as Role)) {
+        updateRole = role as Role;
+      }
+    } else if (role) {
+      updateRole = role;
+    }
+
+    // Chuyển birthDate về kiểu Date nếu có
+    let safeBirthDate: Date | undefined = undefined;
+    if (birthDate) {
+      try {
+        safeBirthDate = new Date(birthDate);
+        if (isNaN(safeBirthDate.getTime())) throw new Error();
+      } catch {
+        return res.status(400).json({ message: 'Ngày sinh không hợp lệ. Định dạng phải là YYYY-MM-DD hoặc ISO-8601.' });
+      }
     }
 
     // Update teacher profile
@@ -165,10 +217,12 @@ export const updateTeacher = async (req: Request, res: Response) => {
         lastName,
         gender,
         office,
-        email, // Email can be updated if it's unique
+        email,
         degreeId,
         departmentId,
         isHead,
+        phone,
+        birthDate: safeBirthDate,
       },
       include: {
         degree: true,
@@ -184,10 +238,10 @@ export const updateTeacher = async (req: Request, res: Response) => {
     });
 
     // If role is provided and different from current, update user role
-    if (role && updatedTeacher.user.role !== role) {
+    if (updateRole && updatedTeacher.user.role !== updateRole) {
       await prisma.user.update({
         where: { id: updatedTeacher.userId },
-        data: { role },
+        data: { role: updateRole },
       });
       // Re-fetch teacher with updated user role for response consistency
       const finalTeacher = await prisma.teacher.findUnique({
@@ -210,7 +264,6 @@ export const updateTeacher = async (req: Request, res: Response) => {
     res.json(updatedTeacher);
   } catch (error) {
     console.error('Error updating teacher:', error);
-    // Handle unique constraint error for email if it's updated
     if ((error as any).code === 'P2002' && (error as any).meta?.target.includes('email')) {
       return res.status(400).json({ message: 'Email đã tồn tại.' });
     }
@@ -336,8 +389,8 @@ export const importFromExcel = async (req: Request, res: Response) => {
     for (const row of data) {
       try {
         // Validate required fields
-        if (!row.firstName || !row.lastName || !row.gender || !row.email || !row.departmentCode || !row.degreeType) {
-          throw new Error('All fields are required except isHead');
+        if (!row.firstName || !row.lastName || !row.gender || !row.email || !row.departmentCode || !row.degreeType || !row.phone || !row.birthDate) {
+          throw new Error('All fields are required: firstName, lastName, gender, email, departmentCode, degreeType, phone, birthDate');
         }
 
         // Validate email format
@@ -404,7 +457,9 @@ export const importFromExcel = async (req: Request, res: Response) => {
             isHead: row.isHead || false,
             degreeId: degree.id,
             departmentId: department.id,
-            userId: user.id
+            userId: user.id,
+            phone: row.phone,
+            birthDate: row.birthDate,
           }
         });
 
@@ -430,7 +485,6 @@ export const importFromExcel = async (req: Request, res: Response) => {
 
 
 export const getTeacherStatistics = async (req: Request, res: Response) => {
-  console.log('Backend: Đã nhận được yêu cầu thống kê giáo viên.');
   try {
     const totalTeachers = await prisma.teacher.count();
 

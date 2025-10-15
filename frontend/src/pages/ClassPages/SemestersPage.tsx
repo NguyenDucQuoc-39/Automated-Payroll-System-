@@ -227,13 +227,9 @@ const SemestersPage: React.FC = () => {
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        {isAdmin && (
-          <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={() => handleOpen()}>
-            Thêm Học Kì mới
-          </Button>
-        )}
-        <FormControl sx={{ minWidth: 200 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 , gap: 2, flexWrap: 'wrap'}}>
+        
+        <FormControl size="small" sx={{ minWidth: 200 }}>
           <InputLabel>Lọc theo Năm học</InputLabel>
           <Select
             value={selectedAcademicYear}
@@ -250,6 +246,18 @@ const SemestersPage: React.FC = () => {
             ))}
           </Select>
         </FormControl>
+        {isAdmin && (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button variant="contained" 
+          color="primary" 
+          startIcon={<AddIcon />} 
+          onClick={() => handleOpen()}
+          sx={{ ml:2 , marginBottom: 2}}
+          >
+            Thêm Học Kì mới
+          </Button>
+          </Box>
+        )}
       </Box>
 
       {loading ? (

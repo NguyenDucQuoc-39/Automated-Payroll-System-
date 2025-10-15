@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Teacher" ALTER COLUMN "phone" DROP DEFAULT,
+ALTER COLUMN "birthDate" DROP DEFAULT;

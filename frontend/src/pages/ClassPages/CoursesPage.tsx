@@ -25,6 +25,7 @@ import {
   CircularProgress,
   Alert,
   InputAdornment,
+  Snackbar
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -35,7 +36,6 @@ import {
 import api from '../../services/api';
 import { RootState } from '../../store';
 import { useSelector } from 'react-redux';
-import { message } from 'antd';
 
 // Định nghĩa lại interface Department để khớp với cấu trúc bạn nhận được
 interface Department {
@@ -59,7 +59,6 @@ interface Course {
   };
 }
 
-
 // Định nghĩa interface cho phản hồi API của departments nếu nó có cấu trúc phân trang
 interface DepartmentApiResponse {
   departments: Department[]; // Đây là mảng các khoa
@@ -69,13 +68,12 @@ interface DepartmentApiResponse {
   totalPages: number;
 }
 
-// **NEW:** Định nghĩa interface cho phản hồi API của courses
+// **SỬA:** Định nghĩa interface cho phản hồi API của courses theo cấu trúc thực tế từ backend
 interface CourseApiResponse {
   courses: Course[]; // Đây là mảng các học phần
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+  totalCount: number; // Tổng số học phần
+  currentPage: number; // Trang hiện tại
+  totalPages: number; // Tổng số trang
 }
 
 const CoursesPage: React.FC = () => {
@@ -91,54 +89,93 @@ const CoursesPage: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error' | 'info' | 'warning'
+  });
 
   const user = useSelector((state: RootState) => state.auth.user);
   const isAdmin = user?.role === 'ADMIN';
+
+  const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning' = 'success') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
 
   const fetchCourses = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // **FIX:** API của bạn trả về một đối tượng có thuộc tính 'courses' là một mảng
-      const response = await api.get<CourseApiResponse>('/courses');
-      // Trích xuất mảng 'courses' từ dữ liệu phản hồi
-      if (Array.isArray(response.data.courses)) {
+      const params: { [key: string]: string } = {
+        page: String(page),
+        pageSize: String(pageSize),
+      };
+      if (searchQuery) params.search = searchQuery;
+
+      console.log('Gọi API với params:', params); // Debug log
+
+      const response = await api.get<CourseApiResponse>('/courses', { params });
+      
+      console.log('Response từ API:', response.data); // Debug log
+      
+      if (response.data.courses && Array.isArray(response.data.courses)) {
         setCourses(response.data.courses);
+        // **SỬA:** Sử dụng totalCount từ API thay vì total
+        setTotal(response.data.totalCount || 0);
+        console.log('Đã set courses:', response.data.courses.length, 'tổng:', response.data.totalCount);
       } else {
-        console.error('API response for courses is not an array (nested property):', response.data.courses);
+        console.error('API response for courses không đúng định dạng:', response.data);
         setError('Dữ liệu học phần không đúng định dạng. Vui lòng kiểm tra lại cấu trúc API.');
       }
     } catch (err: any) {
-      console.error('Error fetching courses:', err);
-      setError('Lỗi khi tải danh sách học phần.');
+      console.error('Lỗi khi fetch courses:', err);
+      const errorMessage = err.response?.data?.message || 'Lỗi khi tải danh sách học phần.';
+      setError(errorMessage);
+      showNotification(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, pageSize, searchQuery]);
 
   const fetchDepartments = useCallback(async () => {
     try {
-      // API của bạn trả về một đối tượng có thuộc tính 'departments' là một mảng
       const response = await api.get('/departments/all');
       const departmentsData = Array.isArray(response.data) ? response.data : [];
-      // Trích xuất mảng 'departments' từ dữ liệu phản hồi
-      if (Array.isArray(departmentsData)) { // Đảm bảo rằng response.data.departments là một mảng
+      
+      if (Array.isArray(departmentsData)) {
         setDepartments(departmentsData);
+        console.log('Đã load departments:', departmentsData.length);
       } else {
-        console.error('API response for departments is not an array (nested property):', response.data.departments);
+        console.error('API response for departments không đúng định dạng:', response.data);
         setError('Dữ liệu khoa không đúng định dạng. Vui lòng kiểm tra lại cấu trúc API.');
       }
     } catch (err: any) {
-      console.error('Error fetching departments:', err);
-      setError('Lỗi khi tải danh sách khoa. Vui lòng thử lại sau.');
+      console.error('Lỗi khi fetch departments:', err);
+      const errorMessage = 'Lỗi khi tải danh sách khoa. Vui lòng thử lại sau.';
+      setError(errorMessage);
+      showNotification(errorMessage, 'error');
     }
   }, []);
 
-
   useEffect(() => {
     fetchCourses();
+  }, [fetchCourses]);
+
+  useEffect(() => {
     fetchDepartments();
-  }, [fetchCourses, fetchDepartments]);
+  }, [fetchDepartments]);
 
   const handleOpen = () => {
     setOpen(true);
@@ -160,16 +197,17 @@ const CoursesPage: React.FC = () => {
     try {
       if (editingCourse) {
         await api.put(`/courses/${editingCourse.id}`, formData);
-        message.success('Cập nhật học phần thành công!');
+        showNotification('Cập nhật học phần thành công!');
       } else {
         await api.post('/courses', formData);
-        message.success('Thêm học phần mới thành công!');
+        showNotification('Thêm học phần mới thành công!');
       }
       fetchCourses();
       handleClose();
     } catch (err: any) {
-      console.error('Error saving course:', err);
-      setError(`Lỗi khi lưu học phần: ${err.response?.data?.message || err.message}`);
+      console.error('Lỗi khi lưu course:', err);
+      const errorMessage = err.response?.data?.message || 'Lỗi khi lưu học phần.';
+      showNotification(errorMessage, 'error');
     }
   };
 
@@ -188,16 +226,17 @@ const CoursesPage: React.FC = () => {
     if (window.confirm('Bạn có chắc chắn muốn xóa học phần này không?')) {
       try {
         await api.delete(`/courses/${id}`);
-        message.success('Xóa học phần thành công!');
+        showNotification('Xóa học phần thành công!');
         fetchCourses();
       } catch (err: any) {
-        console.error('Error deleting course:', err);
-        setError(`Lỗi khi xóa học phần: ${err.response?.data?.message || err.message}`);
+        console.error('Lỗi khi xóa course:', err);
+        const errorMessage = err.response?.data?.message || 'Lỗi khi xóa học phần.';
+        showNotification(errorMessage, 'error');
       }
     }
   };
 
-  if (loading) {
+  if (loading && courses.length === 0) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress />
@@ -206,86 +245,129 @@ const CoursesPage: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error}</Alert>
-        <Button onClick={() => { fetchCourses(); fetchDepartments(); }}>Thử lại</Button>
-      </Box>
-    );
-  }
-
-
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
         Quản lý Học Phần
       </Typography>
-      {isAdmin && (
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            setEditingCourse(null);
-            setFormData({ code: '', name: '', credit: 1, departmentId: '' });
-            handleOpen();
-          }}
-          sx={{ mb: 2 }}
-        >
-          Thêm Học Phần Mới
-        </Button>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
       )}
 
-      <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 650 }} aria-label="simple table">
-          <TableHead>
-            <TableRow>
-              <TableCell>Mã Học Phần</TableCell>
-              <TableCell>Tên Học Phần</TableCell>
-              <TableCell>Số Tín Chỉ</TableCell>
-              <TableCell>Số Tiết</TableCell>
-              <TableCell>Khoa</TableCell>
-              {isAdmin && <TableCell align="center">Hành Động</TableCell>}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {courses.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={isAdmin ? 6 : 5} align="center">
-                  Chưa có học phần nào.
-                </TableCell>
-              </TableRow>
-            ) : (
-              courses.map((course) => (
-                <TableRow
-                  key={course.id}
-                  sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                >
-                  <TableCell component="th" scope="row">
-                    {course.code}
-                  </TableCell>
-                  <TableCell>{course.name}</TableCell>
-                  <TableCell>{course.credit}</TableCell>
-                  <TableCell>{course.totalHours}</TableCell>
-                  <TableCell>{course.department?.fullName}</TableCell>
-                  {isAdmin && (
-                    <TableCell align="center">
-                      <IconButton onClick={() => handleEdit(course)}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleDelete(course.id)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap'}}>
+        <TextField
+          placeholder="Tìm kiếm học phần..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setPage(1);
+          }}
+          InputProps={{
+            startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+          }}
+          size="small"
+          sx={{ minWidth: 400 }}
+        />
 
-      <Dialog open={open} onClose={handleClose}>
+        {isAdmin && (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => {
+              setEditingCourse(null);
+              setFormData({ code: '', name: '', credit: 1, departmentId: '' });
+              handleOpen();
+            }}
+            sx={{ ml: 2 , marginBottom: 2}}
+            color="primary"
+            >
+              Thêm Học Phần Mới
+            </Button>
+          </Box>
+        )}
+      </Box>
+
+      {loading ? (
+        <Box display="flex" justifyContent="center" p={3}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <TableContainer component={Paper}>
+            <Table sx={{ minWidth: 650 }} aria-label="simple table">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Mã Học Phần</TableCell>
+                  <TableCell>Tên Học Phần</TableCell>
+                  <TableCell>Số Tín Chỉ</TableCell>
+                  <TableCell>Số Tiết</TableCell>
+                  <TableCell>Khoa</TableCell>
+                  {isAdmin && <TableCell align="center">Hành Động</TableCell>}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {courses.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={isAdmin ? 6 : 5} align="center">
+                      {searchQuery ? 'Không tìm thấy học phần nào phù hợp.' : 'Chưa có học phần nào.'}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  courses.map((course) => (
+                    <TableRow
+                      key={course.id}
+                      sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                    >
+                      <TableCell component="th" scope="row">
+                        {course.code}
+                      </TableCell>
+                      <TableCell>{course.name}</TableCell>
+                      <TableCell>{course.credit}</TableCell>
+                      <TableCell>{course.totalHours}</TableCell>
+                      <TableCell>{course.department?.fullName}</TableCell>
+                      {isAdmin && (
+                        <TableCell align="center">
+                          <IconButton color="primary" onClick={() => handleEdit(course)}>
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton color="error" onClick={() => handleDelete(course.id)}>
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {/* **SỬA:** Hiển thị pagination khi có dữ liệu và tổng số > pageSize */}
+          {total > 0 && total > pageSize && (
+            <Box display="flex" justifyContent="flex-end" mt={2}>
+              <Pagination
+                count={Math.ceil(total / pageSize)}
+                page={page}
+                onChange={(_, newPage) => setPage(newPage)}
+                color="primary"
+              />
+            </Box>
+          )}
+
+          {/* Debug info - có thể xóa sau khi test xong */}
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Debug: Hiển thị {courses.length} học phần, Tổng: {total}, Trang: {page}, PageSize: {pageSize}
+            </Typography>
+          </Box>
+        </>
+      )}
+
+      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>{editingCourse ? 'Cập nhật Học Phần' : 'Thêm Học Phần Mới'}</DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent>
@@ -298,6 +380,7 @@ const CoursesPage: React.FC = () => {
               value={formData.code}
               onChange={handleChange}
               required
+              sx={{ mb: 2 }}
             />
             <TextField
               margin="dense"
@@ -307,6 +390,7 @@ const CoursesPage: React.FC = () => {
               value={formData.name}
               onChange={handleChange}
               required
+              sx={{ mb: 2 }}
             />
             <TextField
               margin="dense"
@@ -317,6 +401,7 @@ const CoursesPage: React.FC = () => {
               value={formData.credit}
               onChange={(e) => setFormData({ ...formData, credit: Number(e.target.value) })}
               required
+              sx={{ mb: 2 }}
             />
             <FormControl fullWidth margin="dense">
               <InputLabel id="department-select-label">Khoa</InputLabel>
@@ -348,6 +433,17 @@ const CoursesPage: React.FC = () => {
           </DialogActions>
         </form>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

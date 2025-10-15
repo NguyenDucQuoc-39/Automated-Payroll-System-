@@ -51,10 +51,10 @@ const App: React.FC = () => {
         <Route path="courses" element={<CoursesPage />} />
         <Route path="class-sections" element={<ClassSectionPage />} />
         <Route path="class-section-statistics" element={<ClassSectionStatistics />} />
-        <Route path="setting/course" element={<TietHeSoPage />} />
-        <Route path="setting/degree" element={<BangCapHeSoPage />} />
-        <Route path="setting/class-section" element={<LopHeSoPage />} />
-        <Route path="setting/salary" element={<TinhTienDayPage />} />
+        <Route path="tiet-he-so" element={<TietHeSoPage />} />
+        <Route path="bang-cap-he-so" element={<BangCapHeSoPage />} />
+        <Route path="lop-he-so" element={<LopHeSoPage />} />
+        <Route path="tinh-tien-day" element={<TinhTienDayPage />} />
         <Route path="report/teacher-year" element={<TeacherYearReportPage />} />
         <Route path="report/teacher-department" element={<TeacherDepartmentReportPage />} />
         <Route path="report/teacher-school" element={<TeacherSchoolReportPage />} />

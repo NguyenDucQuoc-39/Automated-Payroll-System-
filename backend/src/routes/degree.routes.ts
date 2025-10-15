@@ -10,8 +10,11 @@ import {
 } from '../controllers/degree.controller';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { Role } from '@prisma/client';
+import multer from 'multer';
+
 
 const router = Router();
+const upload = multer({ dest: 'uploads/' });
 
 // All routes require authentication
 router.use(authMiddleware);
@@ -35,6 +38,5 @@ router.put('/:id', adminMiddleware, updateDegree);
 router.delete('/:id', adminMiddleware, deleteDegree);
 
 // Import degrees (admin only)
-router.post('/import', adminMiddleware, importDegrees);
-
+router.post('/import' ,adminMiddleware, upload.single('file'), importDegrees);
 export default router; 

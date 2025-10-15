@@ -34,10 +34,10 @@ export const createCourse = async (req: Request, res: Response) => {
   }
 };
 
-// 2. Lấy tất cả học phần (có phân trang và lọc theo khoa)
+// 2. Lấy tất cả học phần (có phân trang, lọc theo khoa và tìm kiếm)
 export const getCourses = async (req: Request, res: Response) => {
   try {
-    const { page = 1, pageSize = 10, departmentId } = req.query;
+    const { page = 1, pageSize = 10, departmentId, search } = req.query;
     const pageNumber = Number(page);
     const pageSizeNumber = Number(pageSize);
 
@@ -46,8 +46,28 @@ export const getCourses = async (req: Request, res: Response) => {
     }
 
     const where: Prisma.CourseWhereInput = {};
+    
+    // Lọc theo khoa nếu có
     if (departmentId) {
       where.departmentId = departmentId as string;
+    }
+
+    // Tìm kiếm theo mã học phần hoặc tên học phần
+    if (search) {
+      where.OR = [
+        {
+          code: {
+            contains: search as string,
+            mode: 'insensitive', // Không phân biệt hoa thường
+          },
+        },
+        {
+          name: {
+            contains: search as string,
+            mode: 'insensitive', // Không phân biệt hoa thường
+          },
+        },
+      ];
     }
 
     const courses = await prisma.course.findMany({

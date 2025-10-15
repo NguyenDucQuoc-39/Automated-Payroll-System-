@@ -667,7 +667,7 @@ const ClassSectionsPage: React.FC = () => {
         </Alert>
       )}
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 , gap: 2, flexWrap: 'wrap'}}>
         {/* Search and Filter Section */}
         <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
           <TextField
@@ -719,18 +719,19 @@ const ClassSectionsPage: React.FC = () => {
               ))}
             </Select>
           </FormControl>
-          <Button variant="contained" onClick={handleSearchSubmit} sx={{ mr : 2, bottom: 9 }}>
+          <Button variant="contained"  onClick={handleSearchSubmit} sx={{ mr : 2, bottom: 9 }}>
             Áp dụng bộ lọc
           </Button>
         </Box>
 
         {/* Add/Batch Create Buttons */}
-        <Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="contained"
             onClick={handleOpenBatchDialog}
-            sx={{ mr: 2 }}
             startIcon={<AddIcon />}
+            sx={{ ml: 2 , marginBottom: 2, mb: 2}}
+            color="primary"
           >
             Tạo Hàng Loạt Lớp Học Phần
           </Button>
@@ -738,16 +739,17 @@ const ClassSectionsPage: React.FC = () => {
             variant="contained"
             onClick={handleOpen}
             startIcon={<AddIcon />}
+            sx={{ ml: 2 , marginBottom: 2, mb: 2}}
+            color="primary"
           >
             Thêm Lớp Học Phần
           </Button>
           <Button
             variant="contained"
             color="primary"
-            sx={{ mr: 3, ml: 2 }}
             startIcon={<AddIcon />}
             onClick={handleOpenBulkAssign}
-           
+            sx={{ ml: 2 , marginBottom: 2,  mb: 2}}
           >
             Phân Công Giảng Viên
           </Button>
@@ -811,7 +813,7 @@ const ClassSectionsPage: React.FC = () => {
           </TableContainer>
 
           {/* Thêm phân trang */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 3, float: 'right' }}>
             <Pagination
               count={totalPages}
               page={page}

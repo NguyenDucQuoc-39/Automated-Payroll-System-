@@ -1,22 +1,39 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { PlusOutlined, UploadOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import {
+  Add as AddIcon,
+  Upload as UploadIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Search as SearchIcon
+} from '@mui/icons-material';
 import {
   Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
   Button,
-  Input,
-  Modal,
-  Form,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
   Select,
+  MenuItem,
   Typography,
-  Space,
-  message,
+  Box,
   Alert,
-  Upload,
-  Spin,
+  CircularProgress,
   Pagination,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+  IconButton,
+  Grid,
+  Snackbar
+} from '@mui/material';
 import api from '../../services/api';
 import { RootState } from '../../store';
 
@@ -42,7 +59,6 @@ const DepartmentPage: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(false);
-  const [form] = Form.useForm();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,9 +66,39 @@ const DepartmentPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
+  const [formData, setFormData] = useState({
+    code: '',
+    shortName: '',
+    fullName: '',
+    office: '',
+    headId: ''
+  });
+  const [formErrors, setFormErrors] = useState({
+    code: '',
+    shortName: '',
+    fullName: '',
+    office: ''
+  });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error' | 'info' | 'warning'
+  });
 
   const { user } = useSelector((state: RootState) => state.auth);
   const isAdmin = user?.role === 'ADMIN';
+
+  const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning' = 'success') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
 
   const fetchDepartments = async () => {
     setLoading(true);
@@ -63,7 +109,9 @@ const DepartmentPage: React.FC = () => {
       setDepartments(res.data.departments);
       setTotal(res.data.total);
     } catch (err: any) {
-      message.error(err.response?.data?.message || 'Lỗi khi tải danh sách khoa.');
+      const errorMessage = err.response?.data?.message || 'Lỗi khi tải danh sách khoa.';
+      setError(errorMessage);
+      showNotification(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -76,6 +124,7 @@ const DepartmentPage: React.FC = () => {
       setTeachers(data.map((t: any) => ({ ...t, fullName: `${t.firstName} ${t.lastName}` })));
     } catch (err) {
       console.error('Error fetching teachers:', err);
+      showNotification('Lỗi khi tải danh sách giảng viên.', 'error');
     }
   };
 
@@ -90,11 +139,29 @@ const DepartmentPage: React.FC = () => {
   const openModal = (department?: Department) => {
     if (department) {
       setEditingDepartment(department);
-      form.setFieldsValue(department);
+      setFormData({
+        code: department.code,
+        shortName: department.shortName,
+        fullName: department.fullName,
+        office: department.office,
+        headId: department.headId || ''
+      });
     } else {
       setEditingDepartment(null);
-      form.resetFields();
+      setFormData({
+        code: '',
+        shortName: '',
+        fullName: '',
+        office: '',
+        headId: ''
+      });
     }
+    setFormErrors({
+      code: '',
+      shortName: '',
+      fullName: '',
+      office: ''
+    });
     setModalOpen(true);
   };
 
@@ -102,196 +169,288 @@ const DepartmentPage: React.FC = () => {
     if (window.confirm('Bạn có chắc chắn muốn xóa khoa này?')) {
       try {
         await api.delete(`/departments/${id}`);
-        message.success('Đã xóa khoa.');
+        showNotification('Xóa khoa thành công!');
         fetchDepartments();
       } catch (err: any) {
-        message.error(err.response?.data?.message || 'Lỗi khi xóa khoa.');
+        const errorMessage = err.response?.data?.message || 'Lỗi khi xóa khoa.';
+        showNotification(errorMessage, 'error');
       }
     }
   };
 
-  const handleFinish = async (values: any) => {
+  const validateForm = () => {
+    const errors = {
+      code: '',
+      shortName: '',
+      fullName: '',
+      office: ''
+    };
+
+    if (!formData.code) errors.code = 'Vui lòng nhập mã khoa';
+    if (!formData.shortName) errors.shortName = 'Vui lòng nhập tên viết tắt';
+    if (!formData.fullName) errors.fullName = 'Vui lòng nhập tên đầy đủ';
+    if (!formData.office) errors.office = 'Vui lòng nhập văn phòng';
+
+    setFormErrors(errors);
+    return !Object.values(errors).some(error => error);
+  };
+
+  const handleFinish = async () => {
+    if (!validateForm()) return;
+
     setLoading(true);
     try {
+      const submitData = {
+        ...formData,
+        headId: formData.headId || null
+      };
+
       if (editingDepartment) {
-        await api.put(`/departments/${editingDepartment.id}`, values);
-        message.success('Cập nhật thành công.');
+        await api.put(`/departments/${editingDepartment.id}`, submitData);
+        showNotification('Cập nhật khoa thành công!');
       } else {
-        await api.post('/departments', values);
-        message.success('Thêm khoa thành công.');
+        await api.post('/departments', submitData);
+        showNotification('Thêm khoa thành công!');
       }
       setModalOpen(false);
       fetchDepartments();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Lỗi khi lưu khoa.');
+      const errorMessage = err.response?.data?.message || 'Lỗi khi lưu khoa.';
+      setError(errorMessage);
+      showNotification(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const columns: ColumnsType<Department> = [
-    {
-      title: 'Mã Khoa',
-      dataIndex: 'code',
-    },
-    {
-      title: 'Tên Viết Tắt',
-      dataIndex: 'shortName',
-    },
-    {
-      title: 'Tên Đầy Đủ',
-      dataIndex: 'fullName',
-    },
-    {
-      title: 'Văn Phòng',
-      dataIndex: 'office',
-    },
-    {
-      title: 'Trưởng Khoa',
-      dataIndex: ['head', 'fullName'],
-      render: (_: any, record: any) => record.head ? `${record.head.firstName} ${record.head.lastName}` : 'Chưa có',
-    },
-    ...(isAdmin ? [
-      {
-        title: 'Thao Tác',
-        render: (_: any, record: any) => (
-          <Space>
-            <Button icon={<EditOutlined />} onClick={() => openModal(record)} />
-            <Button danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
-          </Space>
-        ),
-      },
-    ] : []),
-  ];
+  const handleFormChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (formErrors[field as keyof typeof formErrors]) {
+      setFormErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const res = await api.post('/departments/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      showNotification('Import Excel thành công!');
+      fetchDepartments();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Import thất bại.';
+      showNotification(errorMessage, 'error');
+    }
+  };
 
   return (
-    <div style={{ padding: 24 }}>
-      <Typography.Title level={3}>Quản lý Khoa</Typography.Title>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom>
+        Quản lý Khoa
+      </Typography>
 
-      <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
-        <Input
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap'}}>
+        <TextField
           placeholder="Tìm kiếm..."
-          prefix={<SearchOutlined />}
-          style={{ width: 300 }}
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
             setPage(1);
           }}
+          InputProps={{
+            startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+          }}
+          size="small"
+          sx={{ minWidth: 400 }}
         />
 
         {isAdmin && (
-          <Space>
-            <Upload
-              accept=".xlsx,.xls"
-              showUploadList={false}
-              customRequest={({ file, onSuccess, onError }) => {
-                const formData = new FormData();
-                formData.append('file', file as Blob);
-                api.post('/departments/import', formData, {
-                  headers: { 'Content-Type': 'multipart/form-data' },
-                })
-                  .then(res => {
-                    message.success('Import thành công.');
-                    fetchDepartments();
-                    onSuccess && onSuccess(res.data, new XMLHttpRequest());
-                  })
-                  .catch(err => {
-                    message.error(err.response?.data?.message || 'Import thất bại.');
-                    onError && onError(err);
-                  });
-              }}
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="contained"
+              startIcon={<UploadIcon />}
+              component="label"
+              sx={{ ml: 2 , marginBottom: 2}}
+              color="success"
             >
-              <Button icon={<UploadOutlined />}>Import Excel</Button>
-            </Upload>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+              Import Excel
+              <input
+                type="file"
+                hidden
+                accept=".xlsx,.xls"
+                onChange={handleFileUpload}
+              />
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => openModal()}
+              sx={{ ml: 2 , marginBottom: 2}}
+            >
               Thêm Khoa
             </Button>
-          </Space>
+          </Box>
         )}
-      </Space>
+      </Box>
 
-      <Spin spinning={loading}>
-        <Table
-          columns={columns}
-          dataSource={departments}
-          rowKey="id"
-          pagination={false}
-        />
-        <Pagination
-          style={{ marginTop: 16, textAlign: 'right' }}
-          total={total}
-          current={page}
-          pageSize={pageSize}
-          showSizeChanger
-          onChange={(p, ps) => {
-            setPage(p);
-            setPageSize(ps);
-          }}
-        />
-      </Spin>
+      {loading ? (
+        <Box display="flex" justifyContent="center" p={3}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Mã Khoa</TableCell>
+                  <TableCell>Tên Viết Tắt</TableCell>
+                  <TableCell>Tên Đầy Đủ</TableCell>
+                  <TableCell>Văn Phòng</TableCell>
+                  <TableCell>Trưởng Khoa</TableCell>
+                  {isAdmin && <TableCell>Thao Tác</TableCell>}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {departments.map((department) => (
+                  <TableRow key={department.id}>
+                    <TableCell>{department.code}</TableCell>
+                    <TableCell>{department.shortName}</TableCell>
+                    <TableCell>{department.fullName}</TableCell>
+                    <TableCell>{department.office}</TableCell>
+                    <TableCell>
+                      {department.head ? `${department.head.firstName} ${department.head.lastName}` : 'Chưa có'}
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <IconButton onClick={() => openModal(department)}>
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton onClick={() => handleDelete(department.id)} color="error">
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
-      <Modal
-        open={modalOpen}
-        title={editingDepartment ? 'Cập nhật Khoa' : 'Thêm Khoa'}
-        onCancel={() => setModalOpen(false)}
-        onOk={() => form.submit()}
-        okText={editingDepartment ? 'Cập nhật' : 'Thêm'}
-      >
-        {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 12 }} />}
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleFinish}
-          initialValues={{ headId: null }}
-        >
-          <Form.Item
-            name="code"
-            label="Mã Khoa"
-            rules={[{ required: true, message: 'Vui lòng nhập mã khoa' }]}
-          >
-            <Input placeholder="VD: CNTT" maxLength={20} showCount disabled={!!editingDepartment} />
-          </Form.Item>
-
-          <Form.Item
-            name="shortName"
-            label="Tên Viết Tắt"
-            rules={[{ required: true, message: 'Vui lòng nhập tên viết tắt' }]}
-          >
-            <Input placeholder="VD: IT, EE" maxLength={20} showCount />
-          </Form.Item>
-
-          <Form.Item
-            name="fullName"
-            label="Tên Đầy Đủ"
-            rules={[{ required: true, message: 'Vui lòng nhập tên đầy đủ' }]}
-          >
-            <Input.TextArea placeholder="VD: Khoa Công nghệ Thông tin" maxLength={100} showCount autoSize />
-          </Form.Item>
-
-          <Form.Item
-            name="office"
-            label="Văn Phòng"
-            rules={[{ required: true, message: 'Vui lòng nhập văn phòng' }]}
-          >
-            <Input placeholder="VD: Tầng 2, nhà A1" maxLength={50} showCount />
-          </Form.Item>
-
-          <Form.Item name="headId" label="Trưởng Khoa">
-            <Select
-              allowClear
-              placeholder="Chọn trưởng khoa"
-              showSearch
-              optionFilterProp="label"
-              options={teachers.map((t) => ({
-                value: t.id,
-                label: `${t.fullName} (${t.email})`,
-              }))}
+          <Box display="flex" justifyContent="flex-end" mt={2}>
+            <Pagination
+              count={Math.ceil(total / pageSize)}
+              page={page}
+              onChange={(_, newPage) => setPage(newPage)}
+              color="primary"
             />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </div>
+          </Box>
+        </>
+      )}
+
+      <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {editingDepartment ? 'Cập nhật Khoa' : 'Thêm Khoa'}
+        </DialogTitle>
+        <DialogContent>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+          
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Mã Khoa"
+              value={formData.code}
+              onChange={(e) => handleFormChange('code', e.target.value)}
+              placeholder="VD: CNTT"
+              error={!!formErrors.code}
+              helperText={formErrors.code}
+              disabled={!!editingDepartment}
+              sx={{ mb: 2 }}
+              inputProps={{ maxLength: 20 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Tên Viết Tắt"
+              value={formData.shortName}
+              onChange={(e) => handleFormChange('shortName', e.target.value)}
+              placeholder="VD: IT, EE"
+              error={!!formErrors.shortName}
+              helperText={formErrors.shortName}
+              sx={{ mb: 2 }}
+              inputProps={{ maxLength: 20 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Tên Đầy Đủ"
+              value={formData.fullName}
+              onChange={(e) => handleFormChange('fullName', e.target.value)}
+              placeholder="VD: Khoa Công nghệ Thông tin"
+              error={!!formErrors.fullName}
+              helperText={formErrors.fullName}
+              sx={{ mb: 2 }}
+              inputProps={{ maxLength: 100 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Văn Phòng"
+              value={formData.office}
+              onChange={(e) => handleFormChange('office', e.target.value)}
+              placeholder="VD: Tầng 2, nhà A1"
+              error={!!formErrors.office}
+              helperText={formErrors.office}
+              sx={{ mb: 2 }}
+              inputProps={{ maxLength: 50 }}
+            />
+
+            <FormControl fullWidth>
+              <InputLabel>Trưởng Khoa</InputLabel>
+              <Select
+                value={formData.headId}
+                onChange={(e) => handleFormChange('headId', e.target.value)}
+                label="Trưởng Khoa"
+              >
+                <MenuItem value="">Chọn trưởng khoa</MenuItem>
+                {teachers.map((teacher) => (
+                  <MenuItem key={teacher.id} value={teacher.id}>
+                    {teacher.fullName} ({teacher.email})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setModalOpen(false)}>Hủy</Button>
+          <Button onClick={handleFinish} variant="contained" disabled={loading}>
+            {editingDepartment ? 'Cập nhật' : 'Thêm'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 };
 

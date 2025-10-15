@@ -44,24 +44,31 @@ export interface UpdateDepartmentInput extends Partial<CreateDepartmentInput> {
 export interface CreateTeacherInput {
   firstName: string;
   lastName: string;
-  gender: Gender;
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
   office: string;
   email: string;
   password: string;
   degreeId: string;
   departmentId: string;
-  role?: Role;
   isHead?: boolean;
+  role?: Role;
+  phone: string;
+  birthDate: string | Date;
 }
 
-export interface UpdateTeacherInput extends Partial<CreateTeacherInput> { //vừa xóa omit
-  // firstName?: string;
-  // lastName?: string;
-  // gender?: Gender;
-  // office?: string;
-  // email?: string;
-  // degreeId?: string;
-  // departmentId?: string;
+export interface UpdateTeacherInput {
+  firstName?: string;
+  lastName?: string;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER';
+  office?: string;
+  email?: string;
+  password?: string;
+  degreeId?: string;
+  departmentId?: string;
+  isHead?: boolean;
+  role?: Role;
+  phone?: string;
+  birthDate?: string | Date;
 }
 
 export interface Semester {
@@ -165,7 +172,7 @@ export interface UpdateClassSectionInput extends Partial<CreateClassSectionInput
 export interface CreateUserInput {
   email: string;
   password: string;
-  role: Role;
+  role: string;
 }
 
 export interface LoginInput {

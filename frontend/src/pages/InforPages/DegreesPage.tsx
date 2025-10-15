@@ -13,33 +13,43 @@ import { useSelector } from 'react-redux';
 import {
   Typography,
   Button,
-  Input,
+  TextField,
   Select,
+  MenuItem,
   Table,
-  Modal,
-  Form,
-  Space,
-  message,
-  Upload,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Box,
   Alert,
-  Spin,
-  Pagination
-} from 'antd';
+  CircularProgress,
+  Pagination,
+  FormControl,
+  InputLabel,
+  Grid,
+  Chip,
+  Snackbar
+} from '@mui/material';
 import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  UploadOutlined,
-  SearchOutlined
-} from '@ant-design/icons';
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Upload as UploadIcon,
+  Search as SearchIcon
+} from '@mui/icons-material';
 import * as XLSX from 'xlsx';
 
 import api from '../../services/api';
 import { RootState } from '../../store';
 import { Degree, FrontendFormDegreeType, BackendDegreeType } from '../../types/typeFrontend';
-
-const { Title, Text } = Typography;
-const { Option } = Select;
 
 const DegreesPage: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
@@ -48,7 +58,6 @@ const DegreesPage: React.FC = () => {
   const [degrees, setDegrees] = useState<Degree[]>([]);
   const [openModal, setOpenModal] = useState(false);
   const [editingDegree, setEditingDegree] = useState<Degree | null>(null);
-  const [form] = Form.useForm();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
   const [page, setPage] = useState(1);
@@ -57,6 +66,21 @@ const DegreesPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    type: '',
+    shortName: '',
+    fullName: ''
+  });
+  const [formErrors, setFormErrors] = useState({
+    type: '',
+    shortName: '',
+    fullName: ''
+  });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error' | 'info' | 'warning'
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -66,6 +90,18 @@ const DegreesPage: React.FC = () => {
     { value: 'Phó Giáo Sư', label: 'Phó Giáo Sư' },
     { value: 'Giáo Sư', label: 'Giáo Sư' },
   ];
+
+  const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning' = 'success') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
 
   const getDisplayDegreeType = useCallback((backendType: BackendDegreeType): string => {
     switch (backendType) {
@@ -92,7 +128,9 @@ const DegreesPage: React.FC = () => {
       setDegrees(res.data.degrees);
       setTotal(res.data.total);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Lỗi khi tải dữ liệu.');
+      const errorMessage = err.response?.data?.message || 'Lỗi khi tải dữ liệu.';
+      setError(errorMessage);
+      showNotification(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -104,179 +142,293 @@ const DegreesPage: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa bằng cấp này?')) {
-    try {
-      await api.delete(`/degrees/${id}`);
-      message.success('Xóa thành công');
-      fetchDegrees();
-    } catch (err: any) {
-      message.error(err.response?.data?.message || 'Lỗi khi xóa bằng cấp.');
+      try {
+        await api.delete(`/degrees/${id}`);
+        showNotification('Xóa bằng cấp thành công!');
+        fetchDegrees();
+      } catch (err: any) {
+        const errorMessage = err.response?.data?.message || 'Lỗi khi xóa bằng cấp.';
+        showNotification(errorMessage, 'error');
       }
     }
+  };
+
+  const validateForm = () => {
+    const errors = {
+      type: '',
+      shortName: '',
+      fullName: ''
+    };
+
+    if (!formData.type) errors.type = 'Vui lòng chọn loại bằng cấp';
+    if (!formData.shortName) errors.shortName = 'Vui lòng nhập tên viết tắt';
+    if (!formData.fullName) errors.fullName = 'Vui lòng nhập tên đầy đủ';
+
+    setFormErrors(errors);
+    return !Object.values(errors).some(error => error);
   };
 
   const handleSubmit = async () => {
+    if (!validateForm()) return;
+
     try {
-      const values = await form.validateFields();
       if (editingDegree) {
-        await api.put(`/degrees/${editingDegree.id}`, values);
-        message.success('Cập nhật thành công');
+        await api.put(`/degrees/${editingDegree.id}`, formData);
+        showNotification('Cập nhật bằng cấp thành công!');
       } else {
-        await api.post('/degrees', values);
-        message.success('Thêm mới thành công');
+        await api.post('/degrees', formData);
+        showNotification('Thêm bằng cấp thành công!');
       }
       fetchDegrees();
       setOpenModal(false);
-    } catch (error) {
-      // Validation error
+      setFormData({ type: '', shortName: '', fullName: '' });
+      setFormErrors({ type: '', shortName: '', fullName: '' });
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Lỗi khi lưu bằng cấp.';
+      showNotification(errorMessage, 'error');
     }
   };
 
-  const columns = [
-    {
-      title: 'STT',
-      dataIndex: 'orderNumber',
-    },
-    {
-      title: 'Loại Bằng Cấp',
-      render: (record: Degree) => getDisplayDegreeType(record.type),
-    },
-    {
-      title: 'Tên Viết Tắt',
-      dataIndex: 'shortName',
-    },
-    {
-      title: 'Tên Đầy Đủ',
-      dataIndex: 'fullName',
-    },
-    isAdmin && {
-      title: 'Thao tác',
-      render: (record: Degree) => (
-        <Space>
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => {
-              setEditingDegree(record);
-              form.setFieldsValue(record);
-              setOpenModal(true);
-            }}
-          />
-          <Button
-            icon={<DeleteOutlined />} danger
-            onClick={() => handleDelete(record.id)}
-          />
-        </Space>
-      ),
-    },
-  ].filter(Boolean);
+  const handleEdit = (degree: Degree) => {
+    setEditingDegree(degree);
+    setFormData({
+      type: getDisplayDegreeType(degree.type),
+      shortName: degree.shortName,
+      fullName: degree.fullName
+    });
+    setOpenModal(true);
+  };
+
+  const handleAdd = () => {
+    setEditingDegree(null);
+    setFormData({ type: '', shortName: '', fullName: '' });
+    setFormErrors({ type: '', shortName: '', fullName: '' });
+    setOpenModal(true);
+  };
+
+  const handleFormChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (formErrors[field as keyof typeof formErrors]) {
+      setFormErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    
+    try {
+      const res = await api.post('/degrees/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      showNotification('Import Excel thành công!');
+      fetchDegrees();
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 'Lỗi khi import Excel.';
+      showNotification(errorMessage, 'error');
+    }
+  };
 
   return (
-    <div>
-      <Title level={3}>Quản lý Bằng Cấp</Title>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom>
+        Quản lý Bằng Cấp
+      </Typography>
 
-      {error && <Alert message={error} type="error" showIcon style={{ marginBottom: 16 }} />}
-      {importResult && <Alert message="Import kết thúc" description={JSON.stringify(importResult)} type="info" showIcon />} 
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+      
+      {importResult && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Import kết thúc: {JSON.stringify(importResult)}
+        </Alert>
+      )}
 
-      <Space style={{ marginBottom: 16 }}>
-        <Input
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap'}}>
+        <TextField
           placeholder="Tìm kiếm theo tên"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          prefix={<SearchOutlined />}
+          InputProps={{
+            startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+          }}
+          size="small"
+          sx={{ minWidth: 400 }}
         />
-        <Select
-          allowClear
-          placeholder="Loại bằng cấp"
-          style={{ width: 200 }}
-          value={selectedType || undefined}
-          onChange={val => setSelectedType(val || '')}
-        >
-          {degreeTypes.map(t => (
-            <Option key={t.value} value={t.value}>{t.label}</Option>
-          ))}
-        </Select>
+        
+        <FormControl size="small" sx={{ minWidth: 200}}>
+          <InputLabel>Loại bằng cấp</InputLabel>
+          <Select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
+            label="Loại bằng cấp"
+          >
+            <MenuItem value="">Tất cả</MenuItem>
+            {degreeTypes.map(t => (
+              <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
         {isAdmin && (
           <>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-              setEditingDegree(null);
-              form.resetFields();
-              setOpenModal(true);
-            }}>Thêm</Button>
-            <Upload beforeUpload={() => false} showUploadList={false}>
-              <Button icon={<UploadOutlined />}>Import từ Excel</Button>
-            </Upload>
+          <Box sx={{ display: 'flex', gap: 1 }}>         
+            <Button
+              variant="contained"
+              startIcon={<UploadIcon />}
+              component="label"
+              sx={{ ml: 2 , marginBottom: 2}}
+              color="success"
+            >
+              Import Excel
+              <input
+                type="file"
+                hidden
+                accept=".xlsx,.xls"
+                onChange={handleFileUpload}
+              />
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAdd}
+              sx={{ ml: 2 , marginBottom: 2}} 
+            >
+              Thêm Bằng Cấp
+            </Button>
+            </Box>
           </>
         )}
-      </Space>
+      </Box>
 
-      <Spin spinning={loading}>
-        <Table
-          columns={columns as any}
-          dataSource={degrees}
-          rowKey="id"
-          pagination={false}
-        />
-        <Pagination
-          total={total}
-          current={page}
-          pageSize={pageSize}
-          onChange={(p, ps) => {
-            setPage(p);
-            setPageSize(ps);
-          }}
-          style={{ marginTop: 16, float: 'right' }}
-        />
-      </Spin>
+      {loading ? (
+        <Box display="flex" justifyContent="center" p={3}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>STT</TableCell>
+                  <TableCell>Loại Bằng Cấp</TableCell>
+                  <TableCell>Tên Viết Tắt</TableCell>
+                  <TableCell>Tên Đầy Đủ</TableCell>
+                  {isAdmin && <TableCell>Thao tác</TableCell>}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {degrees.map((degree, index) => (
+                  <TableRow key={degree.id}>
+                    <TableCell>{(page - 1) * pageSize + index + 1}</TableCell>
+                    <TableCell>{getDisplayDegreeType(degree.type)}</TableCell>
+                    <TableCell>{degree.shortName}</TableCell>
+                    <TableCell>{degree.fullName}</TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <IconButton onClick={() => handleEdit(degree)}>
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton onClick={() => handleDelete(degree.id)} color="error">
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
-      <Modal
-        title={editingDegree ? 'Sửa Bằng Cấp' : 'Thêm Bằng Cấp'}
-        open={openModal}
-        onCancel={() => setOpenModal(false)}
-        onOk={handleSubmit}
-        okText={editingDegree ? 'Cập nhật' : 'Thêm'}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, mb: 3, float: 'right' }}>
+            <Pagination
+              count={Math.ceil(total / pageSize)}
+              page={page}
+              onChange={(_, newPage) => setPage(newPage)}
+              color="primary"
+            />
+          </Box>
+        </>
+      )}
+
+      <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {editingDegree ? 'Sửa Bằng Cấp' : 'Thêm Bằng Cấp'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Loại Bằng Cấp</InputLabel>
+              <Select
+                value={formData.type}
+                onChange={(e) => handleFormChange('type', e.target.value)}
+                label="Loại Bằng Cấp"
+                error={!!formErrors.type}
+              >
+                {degreeTypes.map(t => (
+                  <MenuItem key={t.value} value={t.value}>{t.label}</MenuItem>
+                ))}
+              </Select>
+              {formErrors.type && (
+                <Typography color="error" variant="caption" sx={{ mt: 0.5 }}>
+                  {formErrors.type}
+                </Typography>
+              )}
+            </FormControl>
+
+            <TextField
+              fullWidth
+              label="Tên viết tắt"
+              value={formData.shortName}
+              onChange={(e) => handleFormChange('shortName', e.target.value)}
+              placeholder="Ví dụ: TS, ThS, PGS, GS"
+              error={!!formErrors.shortName}
+              helperText={formErrors.shortName}
+              sx={{ mb: 2 }}
+              inputProps={{ maxLength: 20 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Tên đầy đủ"
+              value={formData.fullName}
+              onChange={(e) => handleFormChange('fullName', e.target.value)}
+              placeholder="Ví dụ: Tiến sĩ Khoa học máy tính, Phó Giáo sư Y học"
+              error={!!formErrors.fullName}
+              helperText={formErrors.fullName}
+              multiline
+              rows={3}
+              inputProps={{ maxLength: 100 }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenModal(false)}>Hủy</Button>
+          <Button onClick={handleSubmit} variant="contained">
+            {editingDegree ? 'Cập nhật' : 'Thêm'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Form form={form} layout="vertical">
-  <Form.Item
-    name="type"
-    label="Loại Bằng Cấp"
-    rules={[{ required: true, message: 'Vui lòng chọn loại bằng cấp' }]}
-  >
-    <Select
-      placeholder="Chọn loại bằng cấp"
-      options={degreeTypes.map(({ value, label }) => ({ value, label }))}
-      showSearch
-      optionFilterProp="label"
-    />
-  </Form.Item>
-
-  <Form.Item
-    name="shortName"
-    label="Tên viết tắt"
-    rules={[{ required: true, message: 'Vui lòng nhập tên viết tắt' }]}
-  >
-    <Input
-      placeholder="Ví dụ: TS, ThS, PGS, GS"
-      maxLength={20}
-      showCount
-      allowClear
-    />
-  </Form.Item>
-
-  <Form.Item
-    name="fullName"
-    label="Tên đầy đủ"
-    rules={[{ required: true, message: 'Vui lòng nhập tên đầy đủ' }]}
-  >
-    <Input.TextArea
-      placeholder="Ví dụ: Tiến sĩ Khoa học máy tính, Phó Giáo sư Y học"
-      autoSize={{ minRows: 2, maxRows: 4 }}
-      maxLength={100}
-      showCount
-      allowClear
-    />
-  </Form.Item>
-</Form>
-      </Modal>
-    </div>
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 };
 

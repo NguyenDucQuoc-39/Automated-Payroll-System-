@@ -33,13 +33,15 @@ model Teacher {
   degreeId     String
   departmentId String
   userId       String   @unique
+  phone        String
+  birthDate    DateTime
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   degree       Degree   @relation(fields: [degreeId], references: [id])
   department   Department @relation(fields: [departmentId], references: [id])
   user         User     @relation(fields: [userId], references: [id])
   departmentHead Department[] @relation("DepartmentHead") // Mối quan hệ ngược lại với DepartmentHead
-   assignedClassSections ClassSection[] @relation("AssignedClassSections") //
+  assignedClassSections ClassSection[] @relation("AssignedClassSections") 
 }
 
 // Department model
@@ -143,7 +145,7 @@ enum Gender {
 
 model LessonCoefficient {
   id           String   @id @default(uuid())
-  academicYear String   // Năm học áp dụng (ví dụ: '2023-2024')
+  academicYear String   @unique // Năm học áp dụng (ví dụ: '2023-2024')
   amount       Int      // Số tiền một tiết
   status       String   // ACTIVE/INACTIVE
   createdAt    DateTime @default(now())

@@ -1,18 +1,61 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Modal, Form, InputNumber, Select, Table, Spin, message, Popconfirm } from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { getLessonCoefficients, createLessonCoefficient, deleteLessonCoefficient } from '../../services/lessonCoefficient.service';
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  CircularProgress,
+  IconButton,
+  Snackbar,
+  Alert,
+  Box,
+  Typography
+} from '@mui/material';
+import { Delete as DeleteIcon, Add as AddIcon, Edit as EditIcon } from '@mui/icons-material';
+import { getLessonCoefficients, createLessonCoefficient, deleteLessonCoefficient, updateLessonCoefficient } from '../../services/lessonCoefficient.service';
 import { getAcademicYears } from '../../services/semester.service';
 
-const { Option } = Select;
-
-const TietHeSoPage = () => {
+const SettingCoursePage = () => {
   const [open, setOpen] = useState(false);
-  const [form] = Form.useForm();
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [year, setYear] = useState('');
+  const [amount, setAmount] = useState('');
+  const [status, setStatus] = useState('');
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [academicYears, setAcademicYears] = useState<string[]>([]);
   const [filterYear, setFilterYear] = useState('');
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error' | 'info' | 'warning'
+  });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
+
+  const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning' = 'success') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
 
   const fetchData = async (yearFilter?: string) => {
     setLoading(true);
@@ -24,7 +67,7 @@ const TietHeSoPage = () => {
       }
       setData(rows);
     } catch (e) {
-      message.error('Không lấy được dữ liệu');
+      showNotification('Không lấy được dữ liệu', 'error');
     }
     setLoading(false);
   };
@@ -35,110 +78,201 @@ const TietHeSoPage = () => {
       if(Array.isArray(res.data)) {
         setAcademicYears(res.data);
       } else {
-        message.error('Không lấy được dữ liệu năm học');
+        showNotification('Không lấy được dữ liệu năm học', 'error');
       }
     });
   }, [filterYear]);
 
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => {
-    setOpen(false);
-    form.resetFields();
+  const resetForm = () => {
+    setYear('');
+    setAmount('');
+    setStatus('');
+    setEditingItem(null);
   };
 
-  const handleCreate = async () => {
+  const handleOpen = () => {
+    resetForm();
+    setOpen(true);
+  };
+  const handleClose = () => {
+    setOpen(false);
+    resetForm();
+  };
+
+  const handleEdit = (item: any) => {
+    setEditingItem(item);
+    setYear(item.academicYear);
+    setAmount(item.amount.toString());
+    setStatus(item.status);
+    setOpen(true);
+  };
+
+  const handleCreateOrUpdate = async () => {
+    if (!year || !amount || !status) {
+      showNotification('Vui lòng nhập đầy đủ thông tin!', 'error');
+      return;
+    }
+    if (Number(amount) <= 0) {
+      showNotification('Số tiền một tiết không được là số âm hoặc bằng 0!', 'error');
+      return;
+    }
+    if (Number(amount) > 999999) {
+      showNotification('Số tiền tối đa là 999.999 VNĐ!', 'error');
+      return;
+    }
     try {
-      const values = await form.validateFields();
-      if (values.amount < 0) {
-        message.error('Số tiền một tiết không được là số âm!');
-        return;
+      if (editingItem) {
+        await updateLessonCoefficient(editingItem.id, { academicYear: year, amount: Number(amount), status });
+        showNotification('Cập nhật thiết lập thành công!', 'success');
+      } else {
+        await createLessonCoefficient({ academicYear: year, amount: Number(amount), status });
+        showNotification('Thêm thiết lập thành công!', 'success');
       }
-      await createLessonCoefficient({ academicYear: values.year, amount: values.amount, status: values.status });
       handleClose();
       fetchData(filterYear);
-      message.success('Thêm thiết lập thành công!');
-    } catch (err) {
-      // validateFields sẽ tự báo lỗi
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Có lỗi xảy ra!';
+      showNotification(msg, 'error');
     }
   };
 
   const handleDelete = async (id: string) => {
-    await deleteLessonCoefficient(id);
-    fetchData(filterYear);
-    message.success('Xóa thành công!');
+    try {
+      await deleteLessonCoefficient(id);
+      fetchData(filterYear);
+      showNotification('Xóa thành công!', 'success');
+    } catch {
+      showNotification('Có lỗi khi xóa!', 'error');
+    }
+    setDeleteDialog({ open: false, id: null });
   };
 
-  const columns = [
-    { title: 'STT', dataIndex: 'index', key: 'index', render: (_: any, __: any, idx: number) => idx + 1 },
-    { title: 'Năm Học', dataIndex: 'academicYear', key: 'academicYear' },
-    { title: 'Số Tiền Một Tiết', dataIndex: 'amount', key: 'amount' },
-    { title: 'Trạng Thái', dataIndex: 'status', key: 'status', render: (v: string) => v === 'ACTIVE' ? 'Đang áp dụng' : 'Chưa áp dụng' },
-    {
-      title: 'Hành Động',
-      key: 'action',
-      render: (_: any, row: any) => (
-        <Popconfirm title="Bạn chắc chắn muốn xóa?" onConfirm={() => handleDelete(row.id)} okText="Xóa" cancelText="Hủy">
-          <Button danger icon={<DeleteOutlined />} size="small" />
-        </Popconfirm>
-      ),
-    },
-  ];
-
   return (
-    <div>
-      <h2>Thiết Lập Hệ Số Tiết</h2>
-      <div style={{ marginBottom: 16, display: 'flex', gap: 16 }}>
-        <Select
-          style={{ minWidth: 200 }}
-          placeholder="Lọc theo năm học"
-          value={filterYear}
-          onChange={setFilterYear}
-          allowClear
-        >
-          <Option value="">Tất cả</Option>
-          {academicYears.map((y: string) => <Option key={y} value={y}>{y}</Option>)}
-        </Select>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleOpen}>Thêm thiết lập</Button>
-      </div>
-      <Modal
-        open={open}
-        title="Thêm Thiết Lập"
-        onCancel={handleClose}
-        onOk={handleCreate}
-        okText="Tạo Thiết Lập"
-        cancelText="Hủy"
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical" preserve={false}>
-          <Form.Item name="year" label="Chọn Năm Học Áp Dụng" rules={[{ required: true, message: 'Vui lòng chọn năm học!' }]}> 
-            <Select placeholder="Chọn năm học">
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom>
+        Thiết Lập Hệ Số Tiết 
+      </Typography>
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        <FormControl size = 'small' sx={{ minWidth: 200 }}>
+          <InputLabel>Lọc theo năm học</InputLabel>
+          <Select
+            value={filterYear}
+            label="Lọc theo năm học"
+            onChange={e => setFilterYear(e.target.value)}
+          >
+            <MenuItem value="">Tất cả</MenuItem>
+            {academicYears.map((y: string) => <MenuItem key={y} value={y}>{y}</MenuItem>)}
+          </Select>
+        </FormControl>
+        <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpen} sx={{ ml: 2, marginBottom: 2 }}>
+          {editingItem ? 'Sửa thiết lập' : 'Thêm thiết lập'}
+        </Button>
+      </Box>
+      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingItem ? 'Sửa Thiết Lập' : 'Thêm Thiết Lập'}</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="year-label">Chọn Năm Học Áp Dụng</InputLabel>
+            <Select
+              labelId="year-label"
+              value={year}
+              label="Chọn Năm Học Áp Dụng"
+              onChange={e => setYear(e.target.value)}
+            >
               {academicYears.map((academicYear: string) => (
-                <Option key={academicYear} value={academicYear}>{academicYear}</Option>
+                <MenuItem key={academicYear} value={academicYear}>{academicYear}</MenuItem>
               ))}
             </Select>
-          </Form.Item>
-          <Form.Item name="amount" label="Số tiền một tiết" rules={[{ required: true, message: 'Vui lòng nhập số tiền!' }]}> 
-            <InputNumber min={0} style={{ width: '100%' }} placeholder="Nhập số tiền một tiết" />
-          </Form.Item>
-          <Form.Item name="status" label="Trạng Thái" rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}> 
-            <Select placeholder="Chọn trạng thái">
-              <Option value="ACTIVE">Hoạt Động</Option>
-              <Option value="INACTIVE">Không Hoạt Động</Option>
+          </FormControl>
+          <TextField
+            margin="normal"
+            label="Số tiền một tiết"
+            type="number"
+            fullWidth
+            value={amount}
+            onChange={e => {
+              const val = e.target.value;
+              if (!val || Number(val) <= 999999) setAmount(val);
+            }}
+            inputProps={{ min: 0, max: 999999, step: 1000 }}
+          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="status-label">Trạng Thái</InputLabel>
+            <Select
+              labelId="status-label"
+              value={status}
+              label="Trạng Thái"
+              onChange={e => setStatus(e.target.value)}
+            >
+              <MenuItem value="ACTIVE">Hoạt Động</MenuItem>
+              <MenuItem value="INACTIVE">Không Hoạt Động</MenuItem>
             </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
-      <Spin spinning={loading} tip="Đang tải dữ liệu...">
-        <Table
-          columns={columns}
-          dataSource={data}
-          rowKey="id"
-          pagination={false}
-          style={{ marginTop: 24 }}
-        />
-      </Spin>
-    </div>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Hủy</Button>
+          <Button onClick={handleCreateOrUpdate} variant="contained">{editingItem ? 'Cập nhật' : 'Tạo Thiết Lập'}</Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false, id: null })}
+      >
+        <DialogTitle>Bạn chắc chắn muốn xóa?</DialogTitle>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog({ open: false, id: null })}>Hủy</Button>
+          <Button color="error" onClick={() => handleDelete(deleteDialog.id!)} variant="contained">Xóa</Button>
+        </DialogActions>
+      </Dialog>
+      {loading ? (
+        <Box display="flex" justifyContent="center" p={3}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <TableContainer component={Paper} sx={{ marginTop: 4 }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>STT</TableCell>
+                <TableCell>Năm Học</TableCell>
+                <TableCell>Số Tiền Một Tiết</TableCell>
+                <TableCell>Trạng Thái</TableCell>
+                <TableCell>Hành Động</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {data.map((row, idx) => (
+                <TableRow key={row.id}>
+                  <TableCell>{idx + 1}</TableCell>
+                  <TableCell>{row.academicYear}</TableCell>
+                  <TableCell>{row.amount.toLocaleString()} VNĐ</TableCell>
+                  <TableCell>{row.status === 'ACTIVE' ? 'Đang áp dụng' : 'Chưa áp dụng'}</TableCell>
+                  <TableCell>
+                    <IconButton color="primary" onClick={() => handleEdit(row)} sx={{ mr: 1 }}>
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton color="error" onClick={() => setDeleteDialog({ open: true, id: row.id })}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 };
 
-export default TietHeSoPage; 
+export default SettingCoursePage; 
